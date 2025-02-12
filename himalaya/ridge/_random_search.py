@@ -203,6 +203,8 @@ def solve_group_ridge_random_search(
 
         scores = backend.zeros_like(gammas,
                                     shape=(n_splits, len(alphas), n_targets))
+        
+        # 🟣 Not needed
         for jj, (train, test) in enumerate(cv.split(X_)):
             train = backend.to_gpu(train, device=device)
             test = backend.to_gpu(test, device=device)
@@ -251,6 +253,7 @@ def solve_group_ridge_random_search(
             del train, test, Xtrain, Xtest
 
         # select best alphas
+        # 🟣
         alphas_argmax, cv_scores_ii = _select_best_alphas(
             scores, alphas, local_alpha, conservative)
         cv_scores[ii, :] = backend.to_cpu(cv_scores_ii)
@@ -259,6 +262,8 @@ def solve_group_ridge_random_search(
         epsilon = np.finfo(_dtype_to_str(dtype)).eps
         mask = cv_scores_ii > current_best_scores + epsilon
         current_best_scores[mask] = cv_scores_ii[mask]
+
+        # 🟢 best_* are probably all that is needed, which we can pass in
         best_gammas[:, mask] = gamma[:, None]
         best_alphas[mask] = alphas[alphas_argmax[mask]]
 
@@ -332,9 +337,9 @@ def solve_group_ridge_random_search(
         intercept = (backend.to_cpu(Y_offset) -
                      backend.to_cpu(X_offset) @ refit_weights
                      ) if return_weights else None
-        return deltas, refit_weights, cv_scores, intercept
+        return deltas, refit_weights, cv_scores, intercept, best_gammas, best_alphas
     else:
-        return deltas, refit_weights, cv_scores
+        return deltas, refit_weights, cv_scores, best_gammas, best_alphas
 
 
 def _decompose_ridge(Xtrain, alphas, n_alphas_batch=None, method="svd",
