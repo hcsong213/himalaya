@@ -2,13 +2,16 @@
 
 To use this backend, call ``himalaya.backend.set_backend("torch_cuda")``.
 """
+
 from .torch import *  # noqa
 import torch
 
 if not torch.cuda.is_available():
     import sys
+
     if "pytest" in sys.modules:  # if run through pytest
         import pytest
+
         pytest.skip("PyTorch with CUDA is not available.")
     raise RuntimeError("PyTorch with CUDA is not available.")
 
@@ -46,6 +49,7 @@ def asarray(x, dtype=None, device="cuda"):
         tensor = torch.as_tensor(x, dtype=dtype, device=device)
     except Exception:
         import numpy as np
+
         array = np.asarray(x, dtype=_dtype_to_str(dtype))
         tensor = torch.as_tensor(array, dtype=dtype, device=device)
     return tensor
@@ -73,7 +77,7 @@ def check_arrays(*all_inputs):
 
 def zeros(shape, dtype="float32", device="cuda"):
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
     if isinstance(dtype, str):
         dtype = getattr(torch, dtype)
     return torch.zeros(shape, dtype=dtype, device=device)

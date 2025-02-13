@@ -14,9 +14,10 @@ from ..validation import check_array
 from ..validation import issparse
 
 
-def check_pairwise_arrays(X, Y, precomputed=False, dtype=None,
-                          accept_sparse='csr', force_all_finite=True):
-    """ Set X and Y appropriately and checks inputs
+def check_pairwise_arrays(
+    X, Y, precomputed=False, dtype=None, accept_sparse="csr", force_all_finite=True
+):
+    """Set X and Y appropriately and checks inputs
 
     If Y is None, it is set as a pointer to X (i.e. not a copy).
     If Y is given, this does not happen.
@@ -73,20 +74,33 @@ def check_pairwise_arrays(X, Y, precomputed=False, dtype=None,
         dtype = _return_float_dtype(X, Y)
 
     if Y is X or Y is None:
-        X = Y = check_array(X, accept_sparse=accept_sparse, dtype=dtype,
-                            force_all_finite=force_all_finite)
+        X = Y = check_array(
+            X,
+            accept_sparse=accept_sparse,
+            dtype=dtype,
+            force_all_finite=force_all_finite,
+        )
     else:
-        X = check_array(X, accept_sparse=accept_sparse, dtype=dtype,
-                        force_all_finite=force_all_finite)
-        Y = check_array(Y, accept_sparse=accept_sparse, dtype=dtype,
-                        force_all_finite=force_all_finite)
+        X = check_array(
+            X,
+            accept_sparse=accept_sparse,
+            dtype=dtype,
+            force_all_finite=force_all_finite,
+        )
+        Y = check_array(
+            Y,
+            accept_sparse=accept_sparse,
+            dtype=dtype,
+            force_all_finite=force_all_finite,
+        )
 
     if precomputed:
         pass
     elif X.shape[1] != Y.shape[1]:
-        raise ValueError("Incompatible dimension for X and Y matrices: "
-                         "X.shape[1] == %d while Y.shape[1] == %d" %
-                         (X.shape[1], Y.shape[1]))
+        raise ValueError(
+            "Incompatible dimension for X and Y matrices: "
+            "X.shape[1] == %d while Y.shape[1] == %d" % (X.shape[1], Y.shape[1])
+        )
 
     return X, Y
 
@@ -135,12 +149,14 @@ def _row_norms(X, squared=False):
 
     if issparse(X):
         import scipy.sparse
+
         if not isinstance(X, scipy.sparse.csr_matrix):
             X = scipy.sparse.csr_matrix(X)
         from sklearn.utils.sparsefuncs_fast import csr_row_norms
+
         norms = csr_row_norms(X)
     else:
-        norms = backend.einsum('ij,ij->i', X, X)
+        norms = backend.einsum("ij,ij->i", X, X)
 
     if not squared:
         backend.sqrt(norms, out=norms)
@@ -152,6 +168,7 @@ def _normalize(X):
     if issparse(X):
         X = X.copy()
         from sklearn.utils.sparsefuncs_fast import inplace_csr_row_normalize_l2
+
         inplace_csr_row_normalize_l2(X)
     else:
         norms = _row_norms(X)
@@ -340,12 +357,12 @@ def cosine_similarity_kernel(X, Y=None):
 
 
 PAIRWISE_KERNEL_FUNCTIONS = {
-    'linear': linear_kernel,
-    'polynomial': polynomial_kernel,
-    'poly': polynomial_kernel,
-    'rbf': rbf_kernel,
-    'sigmoid': sigmoid_kernel,
-    'cosine': cosine_similarity_kernel,
+    "linear": linear_kernel,
+    "polynomial": polynomial_kernel,
+    "poly": polynomial_kernel,
+    "rbf": rbf_kernel,
+    "sigmoid": sigmoid_kernel,
+    "cosine": cosine_similarity_kernel,
 }
 
 ###############################################################################
@@ -393,8 +410,9 @@ def _euclidean_distances_upcast(X, Y, batch_size=None):
     n_features = X.shape[1]
 
     if issparse(X):
-        distances = backend.zeros(shape=(n_samples_X, n_samples_Y),
-                                  dtype=_get_string_dtype(X))
+        distances = backend.zeros(
+            shape=(n_samples_X, n_samples_Y), dtype=_get_string_dtype(X)
+        )
     else:
         distances = backend.zeros_like(X, shape=(n_samples_X, n_samples_Y))
 
@@ -407,9 +425,13 @@ def _euclidean_distances_upcast(X, Y, batch_size=None):
         # Allow 10% more memory than X, Y and the distance matrix take (at
         # least 10MiB)
         maxmem = max(
-            ((x_density * n_samples_X + y_density * n_samples_Y) * n_features +
-             (x_density * n_samples_X * y_density * n_samples_Y)) / 10.,
-            10 * 2 ** 17)
+            (
+                (x_density * n_samples_X + y_density * n_samples_Y) * n_features
+                + (x_density * n_samples_X * y_density * n_samples_Y)
+            )
+            / 10.0,
+            10 * 2**17,
+        )
 
         # The increase amount of memory in 8-byte blocks is:
         # - x_density * batch_size * n_features (copy of chunk of X)
@@ -418,7 +440,7 @@ def _euclidean_distances_upcast(X, Y, batch_size=None):
         # Hence x² + (xd+yd)kx = M, where x=batch_size, k=n_features, M=maxmem
         #                                 xd=x_density and yd=y_density
         tmp = (x_density + y_density) * n_features
-        batch_size = (-tmp + math.sqrt(tmp ** 2 + 4 * maxmem)) / 2
+        batch_size = (-tmp + math.sqrt(tmp**2 + 4 * maxmem)) / 2
         batch_size = max(int(batch_size), 1)
 
     for x_start in range(0, n_samples_X, batch_size):
@@ -441,8 +463,7 @@ def _euclidean_distances_upcast(X, Y, batch_size=None):
                 if issparse(Y):
                     Y_chunk = Y[y_batch].astype("float64", copy=False)
                 else:
-                    Y_chunk = backend.asarray(Y[y_batch],
-                                              dtype=backend.float64)
+                    Y_chunk = backend.asarray(Y[y_batch], dtype=backend.float64)
                 YY_chunk = _row_norms(Y_chunk, squared=True)[None, :]
 
                 d = -2 * X_chunk @ Y_chunk.T
@@ -460,11 +481,10 @@ def _euclidean_distances_upcast(X, Y, batch_size=None):
 
 
 def _pairwise_callable(X, Y, metric, force_all_finite=True, **params):
-    """Handle the callable case for pairwise_{distances,kernels}.
-    """
+    """Handle the callable case for pairwise_{distances,kernels}."""
     backend = get_backend()
     X, Y = check_pairwise_arrays(X, Y, force_all_finite=force_all_finite)
-    out = backend.zeros_like(X, shape=(X.shape[0], Y.shape[0]), dtype='float')
+    out = backend.zeros_like(X, shape=(X.shape[0], Y.shape[0]), dtype="float")
 
     if X is Y:
         # Only calculate metric for upper triangle
@@ -631,9 +651,10 @@ class KernelCenterer(TransformerMixin, BaseEstimator):
         K = check_array(K, ndim=2)
 
         if K.shape[0] != K.shape[1]:
-            raise ValueError("Kernel matrix must be a square matrix."
-                             " Input is a {}x{} matrix.".format(
-                                 K.shape[0], K.shape[1]))
+            raise ValueError(
+                "Kernel matrix must be a square matrix."
+                " Input is a {}x{} matrix.".format(K.shape[0], K.shape[1])
+            )
 
         self.K_fit_rows_ = backend.mean_float64(K, axis=0)
         self.K_fit_all_ = backend.mean_float64(self.K_fit_rows_, axis=0)
@@ -668,4 +689,4 @@ class KernelCenterer(TransformerMixin, BaseEstimator):
         return K
 
     def _more_tags(self):
-        return {'pairwise': True}
+        return {"pairwise": True}

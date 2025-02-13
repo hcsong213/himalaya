@@ -32,8 +32,7 @@ class _BaseKernelRidge(ABC, MultiOutputMixin, RegressorMixin, BaseEstimator):
     @property
     @classmethod
     @abstractmethod
-    def ALL_SOLVERS(cls):
-        ...
+    def ALL_SOLVERS(cls): ...
 
     def _call_solver(self, **direct_params):
         """Helper function common to all classes, merging solver parameters."""
@@ -48,18 +47,18 @@ class _BaseKernelRidge(ABC, MultiOutputMixin, RegressorMixin, BaseEstimator):
         solver_params = self.solver_params or {}
 
         # check duplicated parameters
-        intersection = set(direct_params.keys()).intersection(
-            set(solver_params.keys()))
+        intersection = set(direct_params.keys()).intersection(set(solver_params.keys()))
         if intersection:
             raise ValueError(
-                'Parameters %s should not be given in solver_params, since '
-                'they are either fixed or have a direct parameter in %s.' %
-                (intersection, self.__class__.__name__))
+                "Parameters %s should not be given in solver_params, since "
+                "they are either fixed or have a direct parameter in %s."
+                % (intersection, self.__class__.__name__)
+            )
 
         return function(**direct_params, **solver_params)
 
     def _more_tags(self):
-        return {'requires_y': True}
+        return {"requires_y": True}
 
 
 class KernelRidge(_BaseKernelRidge):
@@ -143,11 +142,20 @@ class KernelRidge(_BaseKernelRidge):
     >>> model.fit(X, Y)
     KernelRidge()
     """
+
     ALL_SOLVERS = KERNEL_RIDGE_SOLVERS
 
-    def __init__(self, alpha=1, kernel="linear", kernel_params=None,
-                 solver="auto", solver_params=None, fit_intercept=False,
-                 force_cpu=False, warn=True):
+    def __init__(
+        self,
+        alpha=1,
+        kernel="linear",
+        kernel_params=None,
+        solver="auto",
+        solver_params=None,
+        fit_intercept=False,
+        force_cpu=False,
+        warn=True,
+    ):
         self.alpha = alpha
         self.kernel = kernel
         self.kernel_params = kernel_params
@@ -178,8 +186,7 @@ class KernelRidge(_BaseKernelRidge):
         self : returns an instance of self.
         """
         backend = get_backend()
-        accept_sparse = False if self.kernel == "precomputed" else ("csr",
-                                                                    "csc")
+        accept_sparse = False if self.kernel == "precomputed" else ("csr", "csc")
         X = check_array(X, accept_sparse=accept_sparse, ndim=2)
         self.dtype_ = _get_string_dtype(X)
         y = check_array(y, dtype=self.dtype_, ndim=[1, 2])
@@ -187,8 +194,7 @@ class KernelRidge(_BaseKernelRidge):
             raise ValueError("Inconsistent number of samples.")
 
         if sample_weight is not None:
-            sample_weight = check_array(sample_weight, dtype=self.dtype_,
-                                        ndim=1)
+            sample_weight = check_array(sample_weight, dtype=self.dtype_, ndim=1)
             if sample_weight.shape[0] != y.shape[0]:
                 raise ValueError("Inconsistent number of samples.")
 
@@ -198,7 +204,9 @@ class KernelRidge(_BaseKernelRidge):
                 "Solving linear kernel ridge is slower than solving ridge when"
                 f" n_samples > n_features (here {n_samples} > {n_features}). "
                 "Using himalaya.ridge.Ridge would be faster. Use warn=False to"
-                " silence this warning.", UserWarning)
+                " silence this warning.",
+                UserWarning,
+            )
 
         K = self._get_kernel(X)
 
@@ -228,8 +236,9 @@ class KernelRidge(_BaseKernelRidge):
             self.solver_ = self.solver
 
         # ------------------ call the solver
-        tmp = self._call_solver(K=K, Y=y, alpha=self.alpha,
-                                fit_intercept=self.fit_intercept)
+        tmp = self._call_solver(
+            K=K, Y=y, alpha=self.alpha, fit_intercept=self.fit_intercept
+        )
         if self.fit_intercept:
             self.dual_coef_, self.intercept_ = tmp
         else:
@@ -259,13 +268,10 @@ class KernelRidge(_BaseKernelRidge):
         """
         check_is_fitted(self)
         backend = get_backend()
-        accept_sparse = False if self.kernel == "precomputed" else ("csr",
-                                                                    "csc")
-        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse,
-                        ndim=2)
+        accept_sparse = False if self.kernel == "precomputed" else ("csr", "csc")
+        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse, ndim=2)
         if X.shape[1] != self.n_features_in_:
-            raise ValueError(
-                'Different number of features in X than during fit.')
+            raise ValueError("Different number of features in X than during fit.")
 
         K = self._get_kernel(X, self.X_fit_)
         del X
@@ -343,11 +349,14 @@ class KernelRidge(_BaseKernelRidge):
                 raise ValueError(
                     "get_primal_coef requires the training features `X_fit`. "
                     "If you used a Kernelizer, you can use the method "
-                    "`get_X_fit`.")
+                    "`get_X_fit`."
+                )
             X_fit_T = X_fit.T
         else:
-            raise ValueError("The primal coefficients can only be computed "
-                             "when using a linear kernel.")
+            raise ValueError(
+                "The primal coefficients can only be computed "
+                "when using a linear kernel."
+            )
 
         X_fit_T = backend.to_cpu(X_fit_T)
         dual_coef = backend.to_cpu(self.dual_coef_)
@@ -433,11 +442,22 @@ class KernelRidgeCV(KernelRidge):
     >>> clf.fit(X, Y)
     KernelRidgeCV()
     """
+
     ALL_SOLVERS = KERNEL_RIDGE_CV_SOLVERS
 
-    def __init__(self, alphas=[0.1, 1], kernel="linear", kernel_params=None,
-                 solver="eigenvalues", solver_params=None, fit_intercept=False,
-                 cv=5, Y_in_cpu=False, force_cpu=False, warn=True):
+    def __init__(
+        self,
+        alphas=[0.1, 1],
+        kernel="linear",
+        kernel_params=None,
+        solver="eigenvalues",
+        solver_params=None,
+        fit_intercept=False,
+        cv=5,
+        Y_in_cpu=False,
+        force_cpu=False,
+        warn=True,
+    ):
         self.alphas = alphas
         self.kernel = kernel
         self.kernel_params = kernel_params
@@ -478,8 +498,7 @@ class KernelRidgeCV(KernelRidge):
             raise ValueError("Inconsistent number of samples.")
 
         if sample_weight is not None:
-            sample_weight = check_array(sample_weight, dtype=self.dtype_,
-                                        ndim=1)
+            sample_weight = check_array(sample_weight, dtype=self.dtype_, ndim=1)
             if sample_weight.shape[0] != y.shape[0]:
                 raise ValueError("Inconsistent number of samples.")
 
@@ -491,7 +510,9 @@ class KernelRidgeCV(KernelRidge):
                 "Solving linear kernel ridge is slower than solving ridge when"
                 f" n_samples > n_features (here {n_samples} > {n_features}). "
                 "Using himalaya.ridge.RidgeCV would be faster. "
-                "Use warn=False to silence this warning.", UserWarning)
+                "Use warn=False to silence this warning.",
+                UserWarning,
+            )
 
         K = self._get_kernel(X)
 
@@ -514,12 +535,17 @@ class KernelRidgeCV(KernelRidge):
         cv = check_cv(self.cv, y)
 
         # ------------------ call the solver
-        tmp = self._call_solver(K=K, Y=y, cv=cv, alphas=alphas,
-                                Y_in_cpu=self.Y_in_cpu,
-                                fit_intercept=self.fit_intercept)
+        tmp = self._call_solver(
+            K=K,
+            Y=y,
+            cv=cv,
+            alphas=alphas,
+            Y_in_cpu=self.Y_in_cpu,
+            fit_intercept=self.fit_intercept,
+        )
         if self.fit_intercept:
             self.best_alphas_, self.dual_coef_, self.cv_scores_ = tmp[:3]
-            self.intercept_, = tmp[3:]
+            (self.intercept_,) = tmp[3:]
         else:
             self.best_alphas_, self.dual_coef_, self.cv_scores_ = tmp
         self.cv_scores_ = self.cv_scores_[0]
@@ -533,10 +559,9 @@ class KernelRidgeCV(KernelRidge):
 
     def _more_tags(self):
         return {
-            '_xfail_checks': {
-                'check_sample_weights_invariance':
-                'zero sample_weight is not equivalent to removing samples, '
-                'because of the cross-validation splits.',
+            "_xfail_checks": {
+                "check_sample_weights_invariance": "zero sample_weight is not equivalent to removing samples, "
+                "because of the cross-validation splits.",
             }
         }
 
@@ -548,8 +573,7 @@ class KernelRidgeCV(KernelRidge):
 
 
 class _BaseWeightedKernelRidge(_BaseKernelRidge):
-    """Private class for shared implementations.
-    """
+    """Private class for shared implementations."""
 
     @force_cpu_backend
     def predict(self, X, split=False):
@@ -576,19 +600,15 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
         check_is_fitted(self)
 
         ndim = 3 if self.kernels == "precomputed" else 2
-        accept_sparse = False if self.kernels == "precomputed" else ("csr",
-                                                                     "csc")
-        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse,
-                        ndim=ndim)
+        accept_sparse = False if self.kernels == "precomputed" else ("csr", "csc")
+        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse, ndim=ndim)
         if X.shape[-1] != self.n_features_in_:
-            raise ValueError(
-                'Different number of features in X than during fit.')
+            raise ValueError("Different number of features in X than during fit.")
 
         Ks = self._get_kernels(X, self.X_fit_)
         del X
 
-        if (self.solver_params is not None
-                and "n_targets_batch" in self.solver_params):
+        if self.solver_params is not None and "n_targets_batch" in self.solver_params:
             n_targets_batch = self.solver_params["n_targets_batch"]
         else:
             n_targets_batch = None
@@ -597,18 +617,25 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
             intercept = self.intercept_
         else:
             intercept = None
-            
 
         if self.dual_coef_.ndim == 1:
             Y_hat = predict_weighted_kernel_ridge(
-                Ks=Ks, dual_weights=self.dual_coef_[:, None],
-                deltas=self.deltas_[:, None], split=split,
-                n_targets_batch=n_targets_batch, intercept=intercept)[..., 0]
+                Ks=Ks,
+                dual_weights=self.dual_coef_[:, None],
+                deltas=self.deltas_[:, None],
+                split=split,
+                n_targets_batch=n_targets_batch,
+                intercept=intercept,
+            )[..., 0]
         else:
             Y_hat = predict_weighted_kernel_ridge(
-                Ks=Ks, dual_weights=self.dual_coef_, deltas=self.deltas_,
-                split=split, n_targets_batch=n_targets_batch,
-                intercept=intercept)
+                Ks=Ks,
+                dual_weights=self.dual_coef_,
+                deltas=self.deltas_,
+                split=split,
+                n_targets_batch=n_targets_batch,
+                intercept=intercept,
+            )
 
         return Y_hat
 
@@ -641,20 +668,16 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
         check_is_fitted(self)
 
         ndim = 3 if self.kernels == "precomputed" else 2
-        accept_sparse = False if self.kernels == "precomputed" else ("csr",
-                                                                     "csc")
-        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse,
-                        ndim=ndim)
+        accept_sparse = False if self.kernels == "precomputed" else ("csr", "csc")
+        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse, ndim=ndim)
         y = check_array(y, dtype=self.dtype_, ndim=self.dual_coef_.ndim)
         if X.shape[-1] != self.n_features_in_:
-            raise ValueError(
-                'Different number of features in X than during fit.')
+            raise ValueError("Different number of features in X than during fit.")
 
         Ks = self._get_kernels(X, self.X_fit_)
         del X
 
-        if (self.solver_params is not None
-                and "n_targets_batch" in self.solver_params):
+        if self.solver_params is not None and "n_targets_batch" in self.solver_params:
             n_targets_batch = self.solver_params["n_targets_batch"]
         else:
             n_targets_batch = None
@@ -667,15 +690,26 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
 
         if self.dual_coef_.ndim == 1:
             score = predict_and_score_weighted_kernel_ridge(
-                Ks=Ks, dual_weights=self.dual_coef_[:, None],
-                deltas=self.deltas_[:, None], Y=y[:, None], split=split,
-                score_func=score_func, intercept=intercept,
-                n_targets_batch=n_targets_batch)[..., 0]
+                Ks=Ks,
+                dual_weights=self.dual_coef_[:, None],
+                deltas=self.deltas_[:, None],
+                Y=y[:, None],
+                split=split,
+                score_func=score_func,
+                intercept=intercept,
+                n_targets_batch=n_targets_batch,
+            )[..., 0]
         else:
             score = predict_and_score_weighted_kernel_ridge(
-                Ks=Ks, dual_weights=self.dual_coef_, deltas=self.deltas_, Y=y,
-                split=split, score_func=score_func, intercept=intercept,
-                n_targets_batch=n_targets_batch)
+                Ks=Ks,
+                dual_weights=self.dual_coef_,
+                deltas=self.deltas_,
+                Y=y,
+                split=split,
+                score_func=score_func,
+                intercept=intercept,
+                n_targets_batch=n_targets_batch,
+            )
         return score
 
     def _get_kernels(self, X, Y=None):
@@ -684,9 +718,10 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
             kernels = backend.asarray(X)
 
         elif not isinstance(self.kernels, (list, tuple)):
-            raise ValueError("Parameter 'kernels' has to be a list or a tuple "
-                             "of kernel parameters. Got %r instead." %
-                             (self.kernels, ))
+            raise ValueError(
+                "Parameter 'kernels' has to be a list or a tuple "
+                "of kernel parameters. Got %r instead." % (self.kernels,)
+            )
         else:
             n_kernels = len(self.kernels)
             kernels_params = self.kernels_params or [{}] * n_kernels
@@ -732,12 +767,16 @@ class _BaseWeightedKernelRidge(_BaseKernelRidge):
                 raise ValueError(
                     "get_primal_coef requires the training features `Xs_fit`. "
                     "If you used a ColumnKernelizer, you can use the method "
-                    "`get_X_fit`.")
+                    "`get_X_fit`."
+                )
             primal_coef = primal_weights_weighted_kernel_ridge(
-                self.dual_coef_, self.deltas_, Xs_fit)
+                self.dual_coef_, self.deltas_, Xs_fit
+            )
         else:
-            raise ValueError("The primal coefficients can only be computed "
-                             "when using precomputed kernels.")
+            raise ValueError(
+                "The primal coefficients can only be computed "
+                "when using precomputed kernels."
+            )
 
         return primal_coef
 
@@ -854,12 +893,21 @@ class MultipleKernelRidgeCV(_BaseWeightedKernelRidge):
     >>> pipe = make_pipeline(ck, model)
     >>> _ = pipe.fit(X, Y)
     """
+
     ALL_SOLVERS = MULTIPLE_KERNEL_RIDGE_SOLVERS
 
-    def __init__(self, kernels=["linear", "polynomial"], kernels_params=None,
-                 solver="random_search", solver_params=None,
-                 fit_intercept=False, cv=5, random_state=None, Y_in_cpu=False,
-                 force_cpu=False):
+    def __init__(
+        self,
+        kernels=["linear", "polynomial"],
+        kernels_params=None,
+        solver="random_search",
+        solver_params=None,
+        fit_intercept=False,
+        cv=5,
+        random_state=None,
+        Y_in_cpu=False,
+        force_cpu=False,
+    ):
         self.kernels = kernels
         self.kernels_params = kernels_params
         self.solver = solver
@@ -894,8 +942,7 @@ class MultipleKernelRidgeCV(_BaseWeightedKernelRidge):
         backend = get_backend()
 
         ndim = 3 if self.kernels == "precomputed" else 2
-        accept_sparse = False if self.kernels == "precomputed" else ("csr",
-                                                                     "csc")
+        accept_sparse = False if self.kernels == "precomputed" else ("csr", "csc")
         X = check_array(X, accept_sparse=accept_sparse, ndim=ndim)
         self.dtype_ = _get_string_dtype(X)
         device = "cpu" if self.Y_in_cpu else None
@@ -906,8 +953,7 @@ class MultipleKernelRidgeCV(_BaseWeightedKernelRidge):
             raise ValueError("Inconsistent number of samples.")
 
         if sample_weight is not None:
-            sample_weight = check_array(sample_weight, dtype=self.dtype_,
-                                        ndim=1)
+            sample_weight = check_array(sample_weight, dtype=self.dtype_, ndim=1)
             if sample_weight.shape[0] != y.shape[0]:
                 raise ValueError("Inconsistent number of samples.")
 
@@ -932,20 +978,27 @@ class MultipleKernelRidgeCV(_BaseWeightedKernelRidge):
         cv = check_cv(self.cv, y)
 
         # ------------------ call the solver
-        tmp = self._call_solver(Ks=Ks, Y=y, cv=cv, return_weights="dual",
-                                Xs=None, random_state=self.random_state,
-                                fit_intercept=self.fit_intercept,
-                                Y_in_cpu=self.Y_in_cpu)
+        tmp = self._call_solver(
+            Ks=Ks,
+            Y=y,
+            cv=cv,
+            return_weights="dual",
+            Xs=None,
+            random_state=self.random_state,
+            fit_intercept=self.fit_intercept,
+            Y_in_cpu=self.Y_in_cpu,
+        )
 
         # ------------------ store results
         self.deltas_, self.dual_coef_, self.cv_scores_ = tmp[:3]
         tmp = list(tmp[3:])
 
-        if (self.solver_params is not None
-                and self.solver_params.get("return_alphas", False)):
+        if self.solver_params is not None and self.solver_params.get(
+            "return_alphas", False
+        ):
             self.best_alphas_ = tmp.pop(0)
         elif self.solver == "random_search":
-            self.best_alphas_ = 1. / backend.exp(self.deltas_).sum(0)
+            self.best_alphas_ = 1.0 / backend.exp(self.deltas_).sum(0)
         else:
             self.best_alphas_ = None
 
@@ -960,10 +1013,9 @@ class MultipleKernelRidgeCV(_BaseWeightedKernelRidge):
 
     def _more_tags(self):
         return {
-            '_xfail_checks': {
-                'check_sample_weights_invariance':
-                'zero sample_weight is not equivalent to removing samples, '
-                'because of the cross-validation splits.',
+            "_xfail_checks": {
+                "check_sample_weights_invariance": "zero sample_weight is not equivalent to removing samples, "
+                "because of the cross-validation splits.",
             }
         }
 
@@ -1066,12 +1118,20 @@ class WeightedKernelRidge(_BaseWeightedKernelRidge):
     >>> pipe = make_pipeline(ck, model)
     >>> pipe.fit(X, Y)
     """
+
     ALL_SOLVERS = WEIGHTED_KERNEL_RIDGE_SOLVERS
 
-    def __init__(self, alpha=1., deltas="zeros",
-                 kernels=["linear", "polynomial"], kernels_params=None,
-                 solver="conjugate_gradient", solver_params=None,
-                 random_state=None, force_cpu=False):
+    def __init__(
+        self,
+        alpha=1.0,
+        deltas="zeros",
+        kernels=["linear", "polynomial"],
+        kernels_params=None,
+        solver="conjugate_gradient",
+        solver_params=None,
+        random_state=None,
+        force_cpu=False,
+    ):
         self.alpha = alpha
         self.deltas = deltas
         self.kernels = kernels
@@ -1105,8 +1165,7 @@ class WeightedKernelRidge(_BaseWeightedKernelRidge):
         backend = get_backend()
 
         ndim = 3 if self.kernels == "precomputed" else 2
-        accept_sparse = False if self.kernels == "precomputed" else ("csr",
-                                                                     "csc")
+        accept_sparse = False if self.kernels == "precomputed" else ("csr", "csc")
         X = check_array(X, accept_sparse=accept_sparse, ndim=ndim)
         self.dtype_ = _get_string_dtype(X)
         y = check_array(y, dtype=self.dtype_, ndim=[1, 2])
@@ -1116,8 +1175,7 @@ class WeightedKernelRidge(_BaseWeightedKernelRidge):
             raise ValueError("Inconsistent number of samples.")
 
         if sample_weight is not None:
-            sample_weight = check_array(sample_weight, dtype=self.dtype_,
-                                        ndim=1)
+            sample_weight = check_array(sample_weight, dtype=self.dtype_, ndim=1)
             if sample_weight.shape[0] != y.shape[0]:
                 raise ValueError("Inconsistent number of samples.")
 
@@ -1146,16 +1204,23 @@ class WeightedKernelRidge(_BaseWeightedKernelRidge):
             self.deltas_ = check_array(self.deltas, ndim=[1, 2])
             if self.deltas_.shape[0] != n_kernels:
                 raise ValueError("Inconsistent number of kernels.")
-            if (self.deltas.ndim == 2 and y.ndim == 2
-                    and self.deltas_.shape[1] != y.shape[1]):
+            if (
+                self.deltas.ndim == 2
+                and y.ndim == 2
+                and self.deltas_.shape[1] != y.shape[1]
+            ):
                 raise ValueError("Inconsistent number of targets.")
             if self.deltas_.ndim == 1:
                 self.deltas_ = self.deltas_[:, None]
 
         # ------------------ call the solver
-        self.dual_coef_ = self._call_solver(Ks=Ks, Y=y, alpha=self.alpha,
-                                            deltas=self.deltas_,
-                                            random_state=self.random_state)
+        self.dual_coef_ = self._call_solver(
+            Ks=Ks,
+            Y=y,
+            alpha=self.alpha,
+            deltas=self.deltas_,
+            random_state=self.random_state,
+        )
 
         if ravel or self.deltas_.shape[1] != self.dual_coef_.shape[1]:
             self.deltas_ = self.deltas_[:, 0]

@@ -30,11 +30,12 @@ def _create_dataset(backend):
     return Xs, Ks, Y
 
 
-@pytest.mark.parametrize('kernel', [
-    'linear', 'polynomial', 'poly', 'rbf', 'sigmoid', 'cosine', 'precomputed'
-])
-@pytest.mark.parametrize('multitarget', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize(
+    "kernel",
+    ["linear", "polynomial", "poly", "rbf", "sigmoid", "cosine", "precomputed"],
+)
+@pytest.mark.parametrize("multitarget", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_vs_scikit_learn(backend, multitarget, kernel):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -52,20 +53,23 @@ def test_kernel_ridge_vs_scikit_learn(backend, multitarget, kernel):
         model.fit(X, Y)
 
         reference = sklearn.kernel_ridge.KernelRidge(
-            alpha=backend.to_numpy(alpha), kernel=kernel)
+            alpha=backend.to_numpy(alpha), kernel=kernel
+        )
         reference.fit(backend.to_numpy(X), backend.to_numpy(Y))
 
         assert model.dual_coef_.shape == Y.shape
         assert_array_almost_equal(model.dual_coef_, reference.dual_coef_)
-        assert_array_almost_equal(model.predict(X),
-                                  reference.predict(backend.to_numpy(X)))
+        assert_array_almost_equal(
+            model.predict(X), reference.predict(backend.to_numpy(X))
+        )
         assert_array_almost_equal(
             model.score(X, Y).mean(),
-            reference.score(backend.to_numpy(X), backend.to_numpy(Y)))
+            reference.score(backend.to_numpy(X), backend.to_numpy(Y)),
+        )
 
 
-@pytest.mark.parametrize('fit_intercept', [False, True])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("fit_intercept", [False, True])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_vs_ridge(backend, fit_intercept):
     # useful to test the intercept as well
     backend = set_backend(backend)
@@ -84,12 +88,13 @@ def test_kernel_ridge_vs_ridge(backend, fit_intercept):
         reference = Ridge(alpha=alpha, fit_intercept=fit_intercept)
         reference.fit(backend.to_numpy(X), backend.to_numpy(Y))
 
-        assert_array_almost_equal(model.predict(X), reference.predict(X),
-                                  decimal=decimal)
+        assert_array_almost_equal(
+            model.predict(X), reference.predict(X), decimal=decimal
+        )
 
 
-@pytest.mark.parametrize('fit_intercept', [False, True])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("fit_intercept", [False, True])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_cv_vs_ridge_cv(backend, fit_intercept):
     # useful to test the intercept as well
     backend = set_backend(backend)
@@ -108,16 +113,15 @@ def test_kernel_ridge_cv_vs_ridge_cv(backend, fit_intercept):
     reference = RidgeCV(alphas=alphas, fit_intercept=fit_intercept)
     reference.fit(X, Y)
 
-    assert_array_almost_equal(model.best_alphas_, reference.best_alphas_,
-                              decimal=5)
-    assert_array_almost_equal(model.predict(X), reference.predict(X),
-                              decimal=decimal)
+    assert_array_almost_equal(model.best_alphas_, reference.best_alphas_, decimal=5)
+    assert_array_almost_equal(model.predict(X), reference.predict(X), decimal=decimal)
 
 
 @pytest.mark.parametrize(
-    'kernel', ['linear', 'polynomial', 'poly', 'rbf', 'sigmoid', 'cosine'])
-@pytest.mark.parametrize('format', ['coo', 'csr', 'csc'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+    "kernel", ["linear", "polynomial", "poly", "rbf", "sigmoid", "cosine"]
+)
+@pytest.mark.parametrize("format", ["coo", "csr", "csc"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_vs_scikit_learn_sparse(backend, kernel, format):
     backend = set_backend(backend)
     Xs, _, Y = _create_dataset(backend)
@@ -129,7 +133,7 @@ def test_kernel_ridge_vs_scikit_learn_sparse(backend, kernel, format):
         raise ImportError("Scipy not installed.") from error
 
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore', scipy.sparse.SparseEfficiencyWarning)
+        warnings.simplefilter("ignore", scipy.sparse.SparseEfficiencyWarning)
         X = scipy.sparse.rand(*Xs[0].shape, density=0.1, format=format)
 
     for alpha in backend.asarray_like(backend.logspace(0, 3, 7), Y):
@@ -137,17 +141,19 @@ def test_kernel_ridge_vs_scikit_learn_sparse(backend, kernel, format):
         model.fit(X, Y)
 
         reference = sklearn.kernel_ridge.KernelRidge(
-            alpha=backend.to_numpy(alpha), kernel=kernel)
+            alpha=backend.to_numpy(alpha), kernel=kernel
+        )
         reference.fit(X, backend.to_numpy(Y))
 
         assert model.dual_coef_.shape == Y.shape
         assert_array_almost_equal(model.dual_coef_, reference.dual_coef_)
         assert_array_almost_equal(model.predict(X), reference.predict(X))
         assert_array_almost_equal(
-            model.score(X, Y).mean(), reference.score(X, backend.to_numpy(Y)))
+            model.score(X, Y).mean(), reference.score(X, backend.to_numpy(Y))
+        )
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_precomputed(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -159,11 +165,10 @@ def test_kernel_ridge_precomputed(backend):
         model_2.fit(Ks[0], Y)
 
         assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_)
-        assert_array_almost_equal(model_1.predict(Xs[0]),
-                                  model_2.predict(Ks[0]))
+        assert_array_almost_equal(model_1.predict(Xs[0]), model_2.predict(Ks[0]))
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_get_primal_coef(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -193,7 +198,7 @@ def test_kernel_ridge_get_primal_coef(backend):
         model.get_primal_coef()
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_weighted_kernel_ridge_get_primal_coef(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -206,14 +211,16 @@ def test_weighted_kernel_ridge_get_primal_coef(backend):
 
     primal_coef = model.get_primal_coef(Xs_fit=Xs)
     predictions_primal = backend.stack(
-        [X @ backend.asarray(w) for X, w in zip(Xs, primal_coef)]).sum(0)
+        [X @ backend.asarray(w) for X, w in zip(Xs, primal_coef)]
+    ).sum(0)
     predictions_dual = model.predict(Ks)
     assert_array_almost_equal(predictions_primal, predictions_dual)
 
 
 @pytest.mark.parametrize(
-    'solver', ['eigenvalues', 'conjugate_gradient', 'gradient_descent'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+    "solver", ["eigenvalues", "conjugate_gradient", "gradient_descent"]
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_solvers(solver, backend):
     backend = set_backend(backend)
     Xs, _, Y = _create_dataset(backend)
@@ -229,22 +236,24 @@ def test_kernel_ridge_solvers(solver, backend):
         solver_params = dict(max_iter=300, tol=1e-6)
 
     for alpha in backend.asarray_like(backend.logspace(0, 3, 7), Y):
-        model = KernelRidge(alpha=alpha, kernel=kernel, solver=solver,
-                            solver_params=solver_params)
+        model = KernelRidge(
+            alpha=alpha, kernel=kernel, solver=solver, solver_params=solver_params
+        )
         model.fit(X, Y)
 
         reference = sklearn.kernel_ridge.KernelRidge(
-            alpha=backend.to_numpy(alpha), kernel=kernel)
+            alpha=backend.to_numpy(alpha), kernel=kernel
+        )
         reference.fit(backend.to_numpy(X), backend.to_numpy(Y))
 
         assert model.dual_coef_.shape == Y.shape
         assert_array_almost_equal(model.dual_coef_, reference.dual_coef_)
-        assert_array_almost_equal(model.predict(X),
-                                  reference.predict(backend.to_numpy(X)),
-                                  decimal=5)
+        assert_array_almost_equal(
+            model.predict(X), reference.predict(backend.to_numpy(X)), decimal=5
+        )
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_wrong_solver(backend):
     backend = set_backend(backend)
     Xs, _, Y = _create_dataset(backend)
@@ -255,8 +264,8 @@ def test_kernel_ridge_wrong_solver(backend):
         model.fit(X, Y)
 
 
-@pytest.mark.parametrize('solver', ['eigenvalues', 'svd'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("solver", ["eigenvalues", "svd"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_cv_precomputed(backend, solver):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -270,18 +279,24 @@ def test_kernel_ridge_cv_precomputed(backend, solver):
     assert_array_almost_equal(model_1.predict(Xs[0]), model_2.predict(Ks[0]))
 
 
-@pytest.mark.parametrize('solver', ['random_search', 'hyper_gradient'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("solver", ["random_search", "hyper_gradient"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_multiple_kernel_ridge_cv_precomputed(backend, solver):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
 
     if solver == "random_search":
-        kwargs = dict(solver="random_search", random_state=0,
-                      solver_params=dict(n_iter=2, progress_bar=False))
+        kwargs = dict(
+            solver="random_search",
+            random_state=0,
+            solver_params=dict(n_iter=2, progress_bar=False),
+        )
     elif solver == "hyper_gradient":
-        kwargs = dict(solver="hyper_gradient", random_state=0,
-                      solver_params=dict(max_iter=2, progress_bar=False))
+        kwargs = dict(
+            solver="hyper_gradient",
+            random_state=0,
+            solver_params=dict(max_iter=2, progress_bar=False),
+        )
 
     model_1 = MultipleKernelRidgeCV(kernels=["linear"], **kwargs)
     model_1.fit(Xs[0], Y)
@@ -289,12 +304,11 @@ def test_multiple_kernel_ridge_cv_precomputed(backend, solver):
     model_2.fit(Ks[0][None], Y)
 
     assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_)
-    assert_array_almost_equal(model_1.predict(Xs[0]),
-                              model_2.predict(Ks[0][None]))
+    assert_array_almost_equal(model_1.predict(Xs[0]), model_2.predict(Ks[0][None]))
 
 
-@pytest.mark.parametrize('solver', ['conjugate_gradient', 'gradient_descent'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("solver", ["conjugate_gradient", "gradient_descent"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_weighted_kernel_ridge_precomputed(backend, solver):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -305,13 +319,11 @@ def test_weighted_kernel_ridge_precomputed(backend, solver):
     model_2.fit(Ks[0][None], Y)
 
     assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_)
-    assert_array_almost_equal(model_1.predict(Xs[0]),
-                              model_2.predict(Ks[0][None]))
+    assert_array_almost_equal(model_1.predict(Xs[0]), model_2.predict(Ks[0][None]))
 
 
-@pytest.mark.parametrize('Estimator',
-                         [WeightedKernelRidge, MultipleKernelRidgeCV])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("Estimator", [WeightedKernelRidge, MultipleKernelRidgeCV])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_weighted_kernel_ridge_split_predict(backend, Estimator):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -333,9 +345,8 @@ def test_weighted_kernel_ridge_split_predict(backend, Estimator):
     assert_array_almost_equal(Y_pred, Y_pred_split.sum(0))
 
 
-@pytest.mark.parametrize('Estimator',
-                         [WeightedKernelRidge, MultipleKernelRidgeCV])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("Estimator", [WeightedKernelRidge, MultipleKernelRidgeCV])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_weighted_kernel_ridge_split_score(backend, Estimator):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -358,11 +369,11 @@ def test_weighted_kernel_ridge_split_score(backend, Estimator):
     model.fit(Ks, Y[:, 0])
     score = model.score(Ks, Y[:, 0])
     score_split = model.score(Ks, Y[:, 0], split=True)
-    assert score_split.shape == (len(Ks), )
+    assert score_split.shape == (len(Ks),)
     assert_array_almost_equal(score, score_split.sum(0), decimal=4)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_duplicate_solver_parameters(backend):
     backend = set_backend(backend)
     Xs, _, Y = _create_dataset(backend)
@@ -372,7 +383,7 @@ def test_duplicate_solver_parameters(backend):
         model.fit(Xs[0], Y)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_cv_predict(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -380,17 +391,16 @@ def test_kernel_ridge_cv_predict(backend):
     n_iter = backend.ones_like(Ks, shape=(1, Ks.shape[0]))
     alphas = backend.logspace(1, 2, 3)
 
-    model_0 = KernelRidgeCV(kernel="precomputed",
-                            alphas=alphas).fit(Ks.sum(0), Y)
+    model_0 = KernelRidgeCV(kernel="precomputed", alphas=alphas).fit(Ks.sum(0), Y)
     model_1 = MultipleKernelRidgeCV(
-        kernels="precomputed", solver_params=dict(n_iter=n_iter,
-                                                  alphas=alphas)).fit(Ks, Y)
+        kernels="precomputed", solver_params=dict(n_iter=n_iter, alphas=alphas)
+    ).fit(Ks, Y)
 
     assert_array_almost_equal(model_0.predict(Ks.sum(0)), model_1.predict(Ks))
 
 
-@pytest.mark.parametrize('solver', ['eigenvalues', 'svd'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("solver", ["eigenvalues", "svd"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_cv_Y_in_cpu(backend, solver):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -404,51 +414,50 @@ def test_kernel_ridge_cv_Y_in_cpu(backend, solver):
     assert_array_almost_equal(model_1.predict(Xs[0]), model_2.predict(Xs[0]))
 
 
-@pytest.mark.parametrize('solver', ['random_search', 'hyper_gradient'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("solver", ["random_search", "hyper_gradient"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_multiple_kernel_ridge_cv_Y_in_cpu(backend, solver):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
 
-    model_1 = MultipleKernelRidgeCV(kernels="precomputed", solver=solver,
-                                    Y_in_cpu=True, random_state=0)
+    model_1 = MultipleKernelRidgeCV(
+        kernels="precomputed", solver=solver, Y_in_cpu=True, random_state=0
+    )
     model_1.fit(Ks, Y)
-    model_2 = MultipleKernelRidgeCV(kernels="precomputed", solver=solver,
-                                    Y_in_cpu=False, random_state=0)
+    model_2 = MultipleKernelRidgeCV(
+        kernels="precomputed", solver=solver, Y_in_cpu=False, random_state=0
+    )
     model_2.fit(Ks, Y)
 
     assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_)
     assert_array_almost_equal(model_1.predict(Ks), model_2.predict(Ks))
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_weighted_kernel_ridge_cv_array_deltas(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
 
     # correct deltas array
-    deltas = backend.zeros_like(Ks, shape=(len(Ks), ))
-    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas,
-                                  random_state=0)
+    deltas = backend.zeros_like(Ks, shape=(len(Ks),))
+    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas, random_state=0)
     model_1.fit(Ks, Y)
 
     # wrong number of kernels
-    deltas = backend.zeros_like(Ks, shape=(len(Ks) + 1, ))
-    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas,
-                                  random_state=0)
+    deltas = backend.zeros_like(Ks, shape=(len(Ks) + 1,))
+    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas, random_state=0)
     with pytest.raises(ValueError, match="Inconsistent number of kernels"):
         model_1.fit(Ks, Y)
 
     # wrong number of targets
     deltas = backend.zeros_like(Ks, shape=(len(Ks), Y.shape[1] + 1))
-    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas,
-                                  random_state=0)
+    model_1 = WeightedKernelRidge(kernels="precomputed", deltas=deltas, random_state=0)
     with pytest.raises(ValueError, match="Inconsistent number of targets"):
         model_1.fit(Ks, Y)
 
 
 @pytest.mark.parametrize(
-    'Estimator',
+    "Estimator",
     [
         Ridge,
         RidgeCV,
@@ -456,8 +465,9 @@ def test_weighted_kernel_ridge_cv_array_deltas(backend):
         KernelRidgeCV,
         # MultipleKernelRidgeCV,  # too long
         WeightedKernelRidge,
-    ])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+    ],
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_n_targets_batch(backend, Estimator):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
@@ -473,72 +483,72 @@ def test_n_targets_batch(backend, Estimator):
 
         for attribute in ["coef_", "dual_coef_", "deltas_"]:
             if hasattr(model, attribute):
-                assert_array_almost_equal(getattr(model, attribute),
-                                          getattr(reference, attribute),
-                                          decimal=5)
+                assert_array_almost_equal(
+                    getattr(model, attribute), getattr(reference, attribute), decimal=5
+                )
 
-        assert_array_almost_equal(model.predict(Xs[0]),
-                                  reference.predict(Xs[0]), decimal=4)
-        assert_array_almost_equal(model.score(Xs[0], Y),
-                                  reference.score(Xs[0], Y), decimal=4)
+        assert_array_almost_equal(
+            model.predict(Xs[0]), reference.predict(Xs[0]), decimal=4
+        )
+        assert_array_almost_equal(
+            model.score(Xs[0], Y), reference.score(Xs[0], Y), decimal=4
+        )
 
 
-@pytest.mark.parametrize('Estimator', [KernelRidge, KernelRidgeCV])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("Estimator", [KernelRidge, KernelRidgeCV])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_warning_kernel_ridge_ridge(backend, Estimator):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
 
-    with pytest.warns(UserWarning,
-                      match="kernel ridge is slower than solving ridge"):
+    with pytest.warns(UserWarning, match="kernel ridge is slower than solving ridge"):
         Estimator(kernel="linear").fit(Xs[0][:, :10], Y)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_ridge_auto_solver(backend):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
     model_1 = KernelRidge(solver="auto").fit(Xs[0], Y)
     assert model_1.solver_ == "eigenvalues"
 
-    alpha = backend.ones_like(Y, shape=(Y.shape[1], ))
+    alpha = backend.ones_like(Y, shape=(Y.shape[1],))
     model_2 = KernelRidge(solver="auto", alpha=alpha).fit(Xs[0], Y)
     assert model_2.solver_ == "conjugate_gradient"
 
-    assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_,
-                              decimal=5)
+    assert_array_almost_equal(model_1.dual_coef_, model_2.dual_coef_, decimal=5)
 
     # array with 1 element
-    alpha = backend.ones_like(Y, shape=(1, ))
+    alpha = backend.ones_like(Y, shape=(1,))
     model_1 = KernelRidge(solver="auto", alpha=alpha).fit(Xs[0], Y)
     assert model_1.solver_ == "eigenvalues"
 
     # first element of an array (!= float with torch)
-    alpha = backend.ones_like(Y, shape=(1, ))[0]
+    alpha = backend.ones_like(Y, shape=(1,))[0]
     model_1 = KernelRidge(solver="auto", alpha=alpha).fit(Xs[0], Y)
     assert model_1.solver_ == "eigenvalues"
 
 
-@pytest.mark.parametrize('fit_intercept', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_multiple_kernel_ridge_intercept_return_alphas(backend, fit_intercept):
     backend = set_backend(backend)
     Xs, Ks, Y = _create_dataset(backend)
 
     solver_params = dict(n_iter=1, return_alphas=True)
 
-    model_1 = MultipleKernelRidgeCV(kernels="precomputed",
-                                    fit_intercept=fit_intercept,
-                                    solver_params=solver_params)
+    model_1 = MultipleKernelRidgeCV(
+        kernels="precomputed", fit_intercept=fit_intercept, solver_params=solver_params
+    )
     model_1.fit(Ks, Y)
     Y_pred_1 = model_1.predict(Ks)
     scores_1 = model_1.score(Ks, Y)
 
     if fit_intercept:
         Y += 10
-    model_2 = MultipleKernelRidgeCV(kernels="precomputed",
-                                    fit_intercept=fit_intercept,
-                                    solver_params=solver_params).fit(Ks, Y)
+    model_2 = MultipleKernelRidgeCV(
+        kernels="precomputed", fit_intercept=fit_intercept, solver_params=solver_params
+    ).fit(Ks, Y)
     model_2.fit(Ks, Y)
     Y_pred_2 = model_2.predict(Ks)
     scores_2 = model_2.score(Ks, Y)
@@ -569,14 +579,14 @@ class KernelRidge_(KernelRidge):
     def score(self, X, y):
         from himalaya.validation import check_array
         from himalaya.scoring import r2_score
+
         backend = get_backend()
 
         y_pred = super().predict(X)
         y_true = check_array(y, dtype=self.dtype_, ndim=self.dual_coef_.ndim)
 
         if y_true.ndim == 1:
-            return backend.to_numpy(
-                r2_score(y_true[:, None], y_pred[:, None])[0])
+            return backend.to_numpy(r2_score(y_true[:, None], y_pred[:, None])[0])
         else:
             return backend.to_numpy(r2_score(y_true, y_pred))
 
@@ -587,11 +597,23 @@ class KernelRidgeCV_(KernelRidgeCV):
     Used for testing only.
     """
 
-    def __init__(self, alphas=(0.1, 1), kernel="linear", kernel_params=None,
-                 solver="eigenvalues", solver_params=None, cv=2):
-        super().__init__(alphas=alphas, kernel=kernel,
-                         kernel_params=kernel_params, solver=solver,
-                         solver_params=solver_params, cv=cv)
+    def __init__(
+        self,
+        alphas=(0.1, 1),
+        kernel="linear",
+        kernel_params=None,
+        solver="eigenvalues",
+        solver_params=None,
+        cv=2,
+    ):
+        super().__init__(
+            alphas=alphas,
+            kernel=kernel,
+            kernel_params=kernel_params,
+            solver=solver,
+            solver_params=solver_params,
+            cv=cv,
+        )
 
     def predict(self, X):
         backend = get_backend()
@@ -600,14 +622,14 @@ class KernelRidgeCV_(KernelRidgeCV):
     def score(self, X, y):
         from himalaya.validation import check_array
         from himalaya.scoring import r2_score
+
         backend = get_backend()
 
         y_pred = super().predict(X)
         y_true = check_array(y, dtype=self.dtype_, ndim=self.dual_coef_.ndim)
 
         if y_true.ndim == 1:
-            return backend.to_numpy(
-                r2_score(y_true[:, None], y_pred[:, None])[0])
+            return backend.to_numpy(r2_score(y_true[:, None], y_pred[:, None])[0])
         else:
             return backend.to_numpy(r2_score(y_true, y_pred))
 
@@ -618,12 +640,23 @@ class MultipleKernelRidgeCV_(MultipleKernelRidgeCV):
     Used for testing only.
     """
 
-    def __init__(self, kernels=("linear", "polynomial"), kernels_params=None,
-                 solver="hyper_gradient", solver_params=None, cv=2,
-                 random_state=None):
-        super().__init__(kernels=kernels, kernels_params=kernels_params,
-                         solver=solver, solver_params=solver_params, cv=cv,
-                         random_state=random_state)
+    def __init__(
+        self,
+        kernels=("linear", "polynomial"),
+        kernels_params=None,
+        solver="hyper_gradient",
+        solver_params=None,
+        cv=2,
+        random_state=None,
+    ):
+        super().__init__(
+            kernels=kernels,
+            kernels_params=kernels_params,
+            solver=solver,
+            solver_params=solver_params,
+            cv=cv,
+            random_state=random_state,
+        )
 
     def predict(self, X, split=False):
         backend = get_backend()
@@ -640,14 +673,25 @@ class WeightedKernelRidge_(WeightedKernelRidge):
     Used for testing only.
     """
 
-    def __init__(self, alpha=1., deltas="zeros",
-                 kernels=("linear", "polynomial"), kernels_params=None,
-                 solver="conjugate_gradient", solver_params=None,
-                 random_state=None):
-        super().__init__(alpha=alpha, deltas=deltas, kernels=kernels,
-                         kernels_params=kernels_params, solver=solver,
-                         solver_params=solver_params,
-                         random_state=random_state)
+    def __init__(
+        self,
+        alpha=1.0,
+        deltas="zeros",
+        kernels=("linear", "polynomial"),
+        kernels_params=None,
+        solver="conjugate_gradient",
+        solver_params=None,
+        random_state=None,
+    ):
+        super().__init__(
+            alpha=alpha,
+            deltas=deltas,
+            kernels=kernels,
+            kernels_params=kernels_params,
+            solver=solver,
+            solver_params=solver_params,
+            random_state=random_state,
+        )
 
     def predict(self, X, split=False):
         backend = get_backend()
@@ -658,13 +702,15 @@ class WeightedKernelRidge_(WeightedKernelRidge):
         return backend.to_numpy(super().score(X, y, split=split))
 
 
-@sklearn.utils.estimator_checks.parametrize_with_checks([
-    KernelRidge_(),
-    KernelRidgeCV_(),
-    MultipleKernelRidgeCV_(),
-    WeightedKernelRidge_(),
-])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@sklearn.utils.estimator_checks.parametrize_with_checks(
+    [
+        KernelRidge_(),
+        KernelRidgeCV_(),
+        MultipleKernelRidgeCV_(),
+        WeightedKernelRidge_(),
+    ]
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_check_estimator(estimator, check, backend):
     backend = set_backend(backend)
     check(estimator)

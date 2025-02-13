@@ -39,11 +39,11 @@ def compute_lipschitz_constants(Xs, kernelize="XTX", random_state=None):
     elif kernelize == "X":
         kernels = Xs
     else:
-        raise ValueError("Unknown parameter kernelize=%r" % (kernelize, ))
+        raise ValueError("Unknown parameter kernelize=%r" % (kernelize,))
 
     # check the random state
     random_generator = check_random_state(random_state)
-    ys = random_generator.randn(*(kernels.shape[:2] + (1, )))
+    ys = random_generator.randn(*(kernels.shape[:2] + (1,)))
 
     ys = backend.asarray_like(ys, Xs)
     for i in range(10):
@@ -53,20 +53,26 @@ def compute_lipschitz_constants(Xs, kernelize="XTX", random_state=None):
     return evs
 
 
-def assert_array_almost_equal(x, y, decimal=6, err_msg='', verbose=True):
+def assert_array_almost_equal(x, y, decimal=6, err_msg="", verbose=True):
     """Test array equality, casting all arrays to numpy."""
     backend = get_backend()
     x = backend.to_numpy(x)
     y = backend.to_numpy(y)
-    return np.testing.assert_array_almost_equal(x, y, decimal=decimal,
-                                                err_msg=err_msg,
-                                                verbose=verbose)
+    return np.testing.assert_array_almost_equal(
+        x, y, decimal=decimal, err_msg=err_msg, verbose=verbose
+    )
 
 
-def generate_multikernel_dataset(n_kernels=4, n_targets=500,
-                                 n_samples_train=1000, n_samples_test=400,
-                                 noise=0.1, kernel_weights=None,
-                                 n_features_list=None, random_state=None):
+def generate_multikernel_dataset(
+    n_kernels=4,
+    n_targets=500,
+    n_samples_train=1000,
+    n_samples_test=400,
+    noise=0.1,
+    kernel_weights=None,
+    n_features_list=None,
+    random_state=None,
+):
     """Utility to generate datasets for the gallery of examples.
 
     Parameters
@@ -105,13 +111,14 @@ def generate_multikernel_dataset(n_kernels=4, n_targets=500,
         Number of features in each kernel.
     """
     from .kernel_ridge import generate_dirichlet_samples
+
     backend = get_backend()
 
     # Create a few kernel weights if not given.
     if kernel_weights is None:
-        kernel_weights = generate_dirichlet_samples(n_targets, n_kernels,
-                                                    concentration=[.3],
-                                                    random_state=random_state)
+        kernel_weights = generate_dirichlet_samples(
+            n_targets, n_kernels, concentration=[0.3], random_state=random_state
+        )
         kernel_weights = backend.to_numpy(kernel_weights)
 
     if n_features_list is None:
@@ -163,8 +170,12 @@ def generate_multikernel_dataset(n_kernels=4, n_targets=500,
 
 def _batch_or_skip(array, batch, axis):
     """Apply a batch on given axis, or skip if the dimension is equal to 1."""
-    skip = (array is None or isinstance(array, numbers.Number)
-            or array.ndim == 0 or array.shape[axis] == 1)  # noqa
+    skip = (
+        array is None
+        or isinstance(array, numbers.Number)
+        or array.ndim == 0
+        or array.shape[axis] == 1
+    )  # noqa
     if skip:
         return array
     else:

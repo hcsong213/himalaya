@@ -86,8 +86,7 @@ class Kernelizer(TransformerMixin, BaseEstimator):
         K : array of shape (n_samples, n_samples)
             Kernel of the input data.
         """
-        accept_sparse = False if self.kernel == "precomputed" else ("csr",
-                                                                    "csc")
+        accept_sparse = False if self.kernel == "precomputed" else ("csr", "csc")
         X = check_array(X, accept_sparse=accept_sparse, ndim=2)
 
         self.X_fit_ = _to_cpu(X) if self.kernel != "precomputed" else None
@@ -134,13 +133,10 @@ class Kernelizer(TransformerMixin, BaseEstimator):
             Kernel of the input data.
         """
         check_is_fitted(self)
-        accept_sparse = False if self.kernel == "precomputed" else ("csr",
-                                                                    "csc")
-        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse,
-                        ndim=2)
+        accept_sparse = False if self.kernel == "precomputed" else ("csr", "csc")
+        X = check_array(X, dtype=self.dtype_, accept_sparse=accept_sparse, ndim=2)
         if X.shape[1] != self.n_features_in_:
-            raise ValueError(
-                'Different number of features in X than during fit.')
+            raise ValueError("Different number of features in X than during fit.")
         K = self._get_kernel(X, self.X_fit_)
         return K
 
@@ -309,12 +305,20 @@ class ColumnKernelizer(ColumnTransformer):
     >>> ck.fit_transform(X).shape
     (2, 4, 4)
     """
+
     # This is not a kernelizer, since it returns multiple kernels
     kernelizer = False
 
-    def __init__(self, transformers, remainder='drop', n_jobs=None,
-                 transformer_weights=None, verbose=False, force_cpu=False,
-                 force_int_remainder_cols=True):
+    def __init__(
+        self,
+        transformers,
+        remainder="drop",
+        n_jobs=None,
+        transformer_weights=None,
+        verbose=False,
+        force_cpu=False,
+        force_int_remainder_cols=True,
+    ):
         self.transformers = transformers
         self.remainder = remainder
         self.sparse_threshold = 0
@@ -332,12 +336,13 @@ class ColumnKernelizer(ColumnTransformer):
         with a Kernelizer.
         """
         for name, trans, column, weight in super()._iter(
-                fitted=fitted, *args, **kwargs):
+            fitted=fitted, *args, **kwargs
+        ):
 
             if not fitted:
-                if trans == 'drop':
+                if trans == "drop":
                     pass
-                elif trans == 'passthrough':
+                elif trans == "passthrough":
                     trans = Kernelizer()
                 elif not _end_with_a_kernel(trans):
                     trans = make_pipeline(trans, Kernelizer())
@@ -375,13 +380,13 @@ class ColumnKernelizer(ColumnTransformer):
             iter_kwargs = {"replace_strings": True}
         else:
             iter_kwargs = {
-                "column_as_labels": False, 
-                "skip_drop": True, 
-                "skip_empty_columns": True
+                "column_as_labels": False,
+                "skip_drop": True,
+                "skip_empty_columns": True,
             }
 
         Xs = []
-        for (_, trans, _, _) in self._iter(fitted=True, **iter_kwargs):
+        for _, trans, _, _ in self._iter(fitted=True, **iter_kwargs):
             if hasattr(trans, "get_X_fit"):
                 X = trans.get_X_fit()
             else:
@@ -478,17 +483,22 @@ def make_column_kernelizer(*transformers, **kwargs):
     """
     # transformer_weights keyword is not passed through because the user
     # would need to know the automatically generated names of the transformers
-    n_jobs = kwargs.pop('n_jobs', None)
-    remainder = kwargs.pop('remainder', 'drop')
-    verbose = kwargs.pop('verbose', False)
-    force_cpu = kwargs.pop('force_cpu', False)
+    n_jobs = kwargs.pop("n_jobs", None)
+    remainder = kwargs.pop("remainder", "drop")
+    verbose = kwargs.pop("verbose", False)
+    force_cpu = kwargs.pop("force_cpu", False)
     if kwargs:
-        raise TypeError('Unknown keyword arguments: "{}"'.format(
-            list(kwargs.keys())[0]))
+        raise TypeError(
+            'Unknown keyword arguments: "{}"'.format(list(kwargs.keys())[0])
+        )
     transformer_list = _get_transformer_list(transformers)
-    return ColumnKernelizer(transformer_list, n_jobs=n_jobs,
-                            remainder=remainder, verbose=verbose,
-                            force_cpu=force_cpu)
+    return ColumnKernelizer(
+        transformer_list,
+        n_jobs=n_jobs,
+        remainder=remainder,
+        verbose=verbose,
+        force_cpu=force_cpu,
+    )
 
 
 def _get_transformer_list(estimators):
@@ -520,6 +530,7 @@ def _end_with_a_kernel(estimator):
 
 def _to_cpu(X):
     from ..validation import issparse
+
     backend = get_backend()
     if issparse(X):
         return X

@@ -17,7 +17,8 @@ from himalaya.utils import generate_multikernel_dataset
 
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-set_config(display='diagram')
+
+set_config(display="diagram")
 
 # sphinx_gallery_thumbnail_number = 2
 ###############################################################################
@@ -36,11 +37,15 @@ backend = set_backend("torch_cuda", on_error="warn")
 # - Y_train : array of shape (n_samples_train, n_targets)
 # - Y_test : array of shape (n_samples_test, n_targets)
 
-(X_train, X_test, Y_train, Y_test, kernel_weights,
- n_features_list) = generate_multikernel_dataset(n_kernels=3, n_targets=50,
-                                                 n_samples_train=600,
-                                                 n_samples_test=300,
-                                                 random_state=42)
+(X_train, X_test, Y_train, Y_test, kernel_weights, n_features_list) = (
+    generate_multikernel_dataset(
+        n_kernels=3,
+        n_targets=50,
+        n_samples_train=600,
+        n_samples_test=300,
+        random_state=42,
+    )
+)
 
 feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 
@@ -52,8 +57,7 @@ feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 # Find the start and end of each feature space X in Xs
 start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
 slices = [
-    slice(start, end)
-    for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
 ]
 
 ###############################################################################
@@ -61,8 +65,9 @@ slices = [
 # linear kernel for all feature spaces, but ``ColumnKernelizer`` accepts any
 # ``Kernelizer``, or ``scikit-learn`` ``Pipeline`` ending with a
 # ``Kernelizer``.
-kernelizers = [(name, Kernelizer(), slice_)
-               for name, slice_ in zip(feature_names, slices)]
+kernelizers = [
+    (name, Kernelizer(), slice_) for name, slice_ in zip(feature_names, slices)
+]
 column_kernelizer = ColumnKernelizer(kernelizers)
 
 # Note that ``ColumnKernelizer`` has a parameter ``n_jobs`` to parallelize each
@@ -101,14 +106,18 @@ n_targets_batch = 1000
 n_alphas_batch = 20
 n_targets_batch_refit = 200
 
-solver_params = dict(n_iter=n_iter, alphas=alphas,
-                     n_targets_batch=n_targets_batch,
-                     n_alphas_batch=n_alphas_batch,
-                     n_targets_batch_refit=n_targets_batch_refit,
-                     jitter_alphas=True)
+solver_params = dict(
+    n_iter=n_iter,
+    alphas=alphas,
+    n_targets_batch=n_targets_batch,
+    n_alphas_batch=n_alphas_batch,
+    n_targets_batch_refit=n_targets_batch_refit,
+    jitter_alphas=True,
+)
 
-model = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search",
-                              solver_params=solver_params)
+model = MultipleKernelRidgeCV(
+    kernels="precomputed", solver="random_search", solver_params=solver_params
+)
 
 ###############################################################################
 # Define and fit the pipeline
@@ -126,7 +135,7 @@ current_max = np.maximum.accumulate(cv_scores, axis=0)
 mean_current_max = np.mean(current_max, axis=1)
 
 x_array = np.arange(1, len(mean_current_max) + 1)
-plt.plot(x_array, mean_current_max, '-o')
+plt.plot(x_array, mean_current_max, "-o")
 plt.grid("on")
 plt.xlabel("Number of kernel weights sampled")
 plt.ylabel("L2 negative loss (higher is better)")

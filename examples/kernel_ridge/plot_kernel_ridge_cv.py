@@ -11,6 +11,7 @@ cross-validation of the regularization parameter, using himalaya's estimator
 # Create a random dataset
 # -----------------------
 import numpy as np
+
 np.random.seed(0)
 n_samples, n_features, n_targets = 10, 20, 4
 X = np.random.randn(n_samples, n_features)
@@ -44,8 +45,9 @@ gscv.best_params_
 # which supports any cross-validation scheme compatible with scikit-learn.
 import himalaya.kernel_ridge
 
-model = himalaya.kernel_ridge.KernelRidgeCV(kernel="linear",
-                                            alphas=np.logspace(-2, 2, 5))
+model = himalaya.kernel_ridge.KernelRidgeCV(
+    kernel="linear", alphas=np.logspace(-2, 2, 5)
+)
 model.fit(X, Y)
 
 ###############################################################################

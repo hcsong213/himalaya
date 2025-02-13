@@ -10,10 +10,19 @@ from ..scoring import r2_score
 from ..validation import check_cv
 
 
-def solve_sparse_group_lasso_cv(X, Y, groups=None, l21_regs=[0.05],
-                                l1_regs=[0.05], cv=5, max_iter=300, tol=1e-4,
-                                momentum=True, n_targets_batch=None,
-                                progress_bar=True):
+def solve_sparse_group_lasso_cv(
+    X,
+    Y,
+    groups=None,
+    l21_regs=[0.05],
+    l1_regs=[0.05],
+    cv=5,
+    max_iter=300,
+    tol=1e-4,
+    momentum=True,
+    n_targets_batch=None,
+    progress_bar=True,
+):
     """Solves the sparse group Lasso, selecting hyperparameters over
     cross-validation.
 
@@ -88,37 +97,46 @@ def solve_sparse_group_lasso_cv(X, Y, groups=None, l21_regs=[0.05],
     if progress_bar:
         progress_bar = ProgressBar(
             f"grid search cv over {n_l21_regs * n_l1_regs} parameters",
-            max_value=n_l21_regs * n_l1_regs * n_splits * n_batches)
+            max_value=n_l21_regs * n_l1_regs * n_splits * n_batches,
+        )
 
     coef = None
-    all_cv_scores = backend.zeros_like(
-        X, shape=(n_l21_regs * n_l1_regs, n_targets))
-    best_l21_reg = backend.zeros_like(X, shape=(n_targets, ))
-    best_l1_reg = backend.zeros_like(X, shape=(n_targets, ))
+    all_cv_scores = backend.zeros_like(X, shape=(n_l21_regs * n_l1_regs, n_targets))
+    best_l21_reg = backend.zeros_like(X, shape=(n_targets,))
+    best_l1_reg = backend.zeros_like(X, shape=(n_targets,))
 
     for kk, (train, val) in enumerate(cv.split(Y)):
         if hasattr(Y, "device"):
             val = backend.asarray(val, device=Y.device)
             train = backend.asarray(train, device=Y.device)
 
-        lipschitz_train = compute_lipschitz_constants(X[train][None],
-                                                      kernelize="XTX")[0]
+        lipschitz_train = compute_lipschitz_constants(X[train][None], kernelize="XTX")[
+            0
+        ]
 
         for start in range(0, n_targets, n_targets_batch):
             batch = slice(start, start + n_targets_batch)
 
             # reset coef, to avoid leaking info from split to split
             coef = None
-            for ii, (l21_reg,
-                     l1_reg) in enumerate(itertools.product(l21_regs,
-                                                            l1_regs)):
+            for ii, (l21_reg, l1_reg) in enumerate(
+                itertools.product(l21_regs, l1_regs)
+            ):
 
                 coef = solve_sparse_group_lasso(
-                    X[train], Y[train][:, batch], groups=groups,
-                    l21_reg=l21_reg, l1_reg=l1_reg, max_iter=max_iter, tol=tol,
-                    momentum=momentum, initial_coef=coef,
-                    lipschitz=lipschitz_train, n_targets_batch=n_targets_batch,
-                    progress_bar=False)
+                    X[train],
+                    Y[train][:, batch],
+                    groups=groups,
+                    l21_reg=l21_reg,
+                    l1_reg=l1_reg,
+                    max_iter=max_iter,
+                    tol=tol,
+                    momentum=momentum,
+                    initial_coef=coef,
+                    lipschitz=lipschitz_train,
+                    n_targets_batch=n_targets_batch,
+                    progress_bar=False,
+                )
 
                 Y_val_pred = X[val] @ coef
                 scores = r2_score(Y[val][:, batch], Y_val_pred)
@@ -132,32 +150,49 @@ def solve_sparse_group_lasso_cv(X, Y, groups=None, l21_regs=[0.05],
     all_cv_scores /= n_splits
     argmax = backend.argmax(all_cv_scores, 0)
     config = backend.asarray(
-        list(
-            itertools.product(backend.to_numpy(l21_regs),
-                              backend.to_numpy(l1_regs))))
+        list(itertools.product(backend.to_numpy(l21_regs), backend.to_numpy(l1_regs)))
+    )
     best_config = config[argmax]
     best_l21_reg = best_config[:, 0]
     best_l1_reg = best_config[:, 1]
 
     # refit
-    coef_cpu = backend.zeros_like(X, shape=(n_features, n_targets),
-                                  device="cpu")
+    coef_cpu = backend.zeros_like(X, shape=(n_features, n_targets), device="cpu")
     for start in range(0, n_targets, n_targets_batch):
         batch = slice(start, start + n_targets_batch)
         coef = solve_sparse_group_lasso(
-            X, Y[:, batch], groups=groups, l21_reg=best_l21_reg[batch],
-            l1_reg=best_l1_reg[batch], max_iter=max_iter, tol=tol,
-            momentum=momentum, initial_coef=None, lipschitz=None,
-            n_targets_batch=None, progress_bar=False)
+            X,
+            Y[:, batch],
+            groups=groups,
+            l21_reg=best_l21_reg[batch],
+            l1_reg=best_l1_reg[batch],
+            max_iter=max_iter,
+            tol=tol,
+            momentum=momentum,
+            initial_coef=None,
+            lipschitz=None,
+            n_targets_batch=None,
+            progress_bar=False,
+        )
         coef_cpu[:, batch] = backend.to_cpu(coef)
     return coef_cpu, best_l21_reg, best_l1_reg, all_cv_scores
 
 
-def solve_sparse_group_lasso(X, Y, groups=None, l21_reg=0.05, l1_reg=0.05,
-                             max_iter=300, tol=1e-4, momentum=True,
-                             initial_coef=None, lipschitz=None,
-                             n_targets_batch=None, progress_bar=True,
-                             debug=False):
+def solve_sparse_group_lasso(
+    X,
+    Y,
+    groups=None,
+    l21_reg=0.05,
+    l1_reg=0.05,
+    max_iter=300,
+    tol=1e-4,
+    momentum=True,
+    initial_coef=None,
+    lipschitz=None,
+    n_targets_batch=None,
+    progress_bar=True,
+    debug=False,
+):
     """Solves the sparse group Lasso.
 
     Parameters
@@ -228,18 +263,18 @@ def solve_sparse_group_lasso(X, Y, groups=None, l21_reg=0.05, l1_reg=0.05,
 
     l1_reg = backend.asarray_like(backend.atleast_1d(l1_reg), ref=Y)
     if l1_reg.shape[0] == 1:
-        l1_reg = backend.ones_like(Y, shape=(n_targets, )) * l1_reg[0]
+        l1_reg = backend.ones_like(Y, shape=(n_targets,)) * l1_reg[0]
     l21_reg = backend.asarray_like(backend.atleast_1d(l21_reg), ref=Y)
     if l21_reg.shape[0] == 1:
-        l21_reg = backend.ones_like(Y, shape=(n_targets, )) * l21_reg[0]
+        l21_reg = backend.ones_like(Y, shape=(n_targets,)) * l21_reg[0]
 
     use_l1_reg = any(l1_reg > 0)
     use_l21_reg = any(l21_reg > 0)
 
     use_it = progress_bar and n_targets > n_targets_batch
     for bb, start in enumerate(
-            bar(range(0, n_targets, n_targets_batch), title="Group Lasso",
-                use_it=use_it)):
+        bar(range(0, n_targets, n_targets_batch), title="Group Lasso", use_it=use_it)
+    ):
         batch = slice(start, start + n_targets_batch)
 
         def loss(ww):
@@ -251,8 +286,7 @@ def solve_sparse_group_lasso(X, Y, groups=None, l21_reg=0.05, l1_reg=0.05,
 
             if use_l21_reg:
                 for group in groups:
-                    error_sq += l21_reg[batch] * backend.sqrt(
-                        (ww[group] ** 2).sum(0))
+                    error_sq += l21_reg[batch] * backend.sqrt((ww[group] ** 2).sum(0))
 
             return error_sq
 
@@ -269,10 +303,17 @@ def solve_sparse_group_lasso(X, Y, groups=None, l21_reg=0.05, l1_reg=0.05,
             return ww
 
         tmp = _proximal_gradient_descent(
-            loss, grad, prox, step_size=1. / lipschitz, x0=coef[:, batch],
-            max_iter=max_iter, momentum=momentum, tol=tol,
+            loss,
+            grad,
+            prox,
+            step_size=1.0 / lipschitz,
+            x0=coef[:, batch],
+            max_iter=max_iter,
+            momentum=momentum,
+            tol=tol,
             progress_bar=progress_bar and n_targets <= n_targets_batch,
-            debug=debug)
+            debug=debug,
+        )
         if debug:
             tmp, losses = tmp
         coef[:, batch] = tmp
@@ -297,8 +338,9 @@ def _sqrt_l2_prox(ww, reg):
     mask = norm_ww == 0
 
     ww[:, mask] = 0
-    ww[:, ~mask] = backend.clip(1 - reg[~mask] / norm_ww[~mask], 0,
-                                None)[None] * ww[:, ~mask]
+    ww[:, ~mask] = (
+        backend.clip(1 - reg[~mask] / norm_ww[~mask], 0, None)[None] * ww[:, ~mask]
+    )
     return ww
 
 
@@ -317,9 +359,18 @@ def _l21_prox(ww, reg, groups):
 # fista algorithm
 
 
-def _proximal_gradient_descent(f_loss, f_grad, f_prox, step_size, x0, max_iter,
-                               momentum=True, tol=1e-7, progress_bar=True,
-                               debug=False):
+def _proximal_gradient_descent(
+    f_loss,
+    f_grad,
+    f_prox,
+    step_size,
+    x0,
+    max_iter,
+    momentum=True,
+    tol=1e-7,
+    progress_bar=True,
+    debug=False,
+):
     """Proximal Gradient Descent (PGD) and Accelerated PDG.
 
     This reduces to ISTA and FISTA when the loss function is the l2 loss and
@@ -373,7 +424,7 @@ def _proximal_gradient_descent(f_loss, f_grad, f_prox, step_size, x0, max_iter,
     mask = backend.ones_like(x0, dtype=backend.bool, shape=(x0.shape[1]))
 
     if progress_bar:
-        progress_bar = ProgressBar(title='fista', max_value=max_iter)
+        progress_bar = ProgressBar(title="fista", max_value=max_iter)
     for ii in range(max_iter):
         # apply gradient and prox, from x_aux
         x_old[:] = x_hat[:, mask]
@@ -386,14 +437,15 @@ def _proximal_gradient_descent(f_loss, f_grad, f_prox, step_size, x0, max_iter,
         if momentum:
             t_old = t_new
             t_new = (1 + np.sqrt(1 + 4 * t_old * t_old)) / 2
-            x_aux += (t_old - 1.) / t_new * diff
+            x_aux += (t_old - 1.0) / t_new * diff
 
         if debug:
             losses.append(f_loss(x_hat))
 
         if tol is not None:
-            criterion = (backend.norm(diff, axis=0) /
-                         (backend.norm(x_hat[:, mask], axis=0) + 1e-16))
+            criterion = backend.norm(diff, axis=0) / (
+                backend.norm(x_hat[:, mask], axis=0) + 1e-16
+            )
             just_converged = criterion <= tol
 
             if backend.any(just_converged):

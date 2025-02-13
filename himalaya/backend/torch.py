@@ -2,14 +2,17 @@
 
 To use this backend, call ``himalaya.backend.set_backend("torch")``.
 """
+
 from functools import partial
 
 try:
     import torch
 except ImportError as error:
     import sys
+
     if "pytest" in sys.modules:  # if run through pytest
         import pytest
+
         pytest.skip("PyTorch not installed.")
     raise ImportError("PyTorch not installed.") from error
 
@@ -43,11 +46,11 @@ def std_float64(X, axis=None, demean=True, keepdims=False):
     and cast back the result to original dtype.
     """
     X_64 = torch.as_tensor(X, dtype=torch.float64)
-    X_std = (X_64 ** 2).sum(dim=axis, dtype=torch.float64)
+    X_std = (X_64**2).sum(dim=axis, dtype=torch.float64)
     if demean:
         X_std -= X_64.sum(axis, dtype=torch.float64) ** 2 / X.shape[axis]
-    X_std = X_std ** .5
-    X_std /= (X.shape[axis] ** .5)
+    X_std = X_std**0.5
+    X_std /= X.shape[axis] ** 0.5
 
     X_std = torch.as_tensor(X_std, dtype=X.dtype, device=X.device)
     if keepdims:
@@ -81,8 +84,8 @@ sum = torch.sum
 sqrt = torch.sqrt
 any = torch.any
 all = torch.all
-nan = torch.tensor(float('nan'))
-inf = torch.tensor(float('inf'))
+nan = torch.tensor(float("nan"))
+inf = torch.tensor(float("inf"))
 isnan = torch.isnan
 isinf = torch.isinf
 logspace = torch.logspace
@@ -146,12 +149,14 @@ def is_in_gpu(array):
 
 def isin(x, y):
     import numpy as np  # XXX
+
     np_result = np.isin(x.cpu().numpy(), y.cpu().numpy())
     return asarray(np_result, dtype=torch.bool, device=x.device)
 
 
 def searchsorted(x, y):
     import numpy as np  # XXX
+
     np_result = np.searchsorted(x.cpu().numpy(), y.cpu().numpy())
     return asarray(np_result, dtype=torch.int64, device=x.device)
 
@@ -176,6 +181,7 @@ def asarray(x, dtype=None, device="cpu"):
         tensor = torch.as_tensor(x, dtype=dtype, device=device)
     except Exception:
         import numpy as np
+
         array = np.asarray(x, dtype=_dtype_to_str(dtype))
         tensor = torch.as_tensor(array, dtype=dtype, device=device)
     return tensor
@@ -218,7 +224,7 @@ def min(*args, **kwargs):
 
 def zeros(shape, dtype="float32", device="cpu"):
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
     if isinstance(dtype, str):
         dtype = getattr(torch, dtype)
     return torch.zeros(shape, dtype=dtype, device=device)
@@ -229,7 +235,7 @@ def zeros_like(array, shape=None, dtype=None, device=None):
     if shape is None:
         shape = array.shape
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
     if isinstance(dtype, str):
         dtype = getattr(torch, dtype)
     if dtype is None:
@@ -244,7 +250,7 @@ def ones_like(array, shape=None, dtype=None, device=None):
     if shape is None:
         shape = array.shape
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
     if isinstance(dtype, str):
         dtype = getattr(torch, dtype)
     if dtype is None:
@@ -259,15 +265,16 @@ def full_like(array, fill_value, shape=None, dtype=None, device=None):
     if shape is None:
         shape = array.shape
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
     if isinstance(dtype, str):
         dtype = getattr(torch, dtype)
     if dtype is None:
         dtype = array.dtype
     if device is None:
         device = array.device
-    return torch.full(shape, fill_value, dtype=dtype, device=device,
-                      layout=array.layout)
+    return torch.full(
+        shape, fill_value, dtype=dtype, device=device, layout=array.layout
+    )
 
 
 def check_arrays(*all_inputs):
@@ -303,9 +310,12 @@ except AttributeError:
 try:
     eigh = _add_error_message(
         torch.linalg.eigh,
-        msg=(f"The eigenvalues decomposition failed on backend {name}. You may"
-             " try using `diagonalize_method='svd'`, or `solver_params={"
-             "'diagonalize_method': 'svd'}` if called through the class API."))
+        msg=(
+            f"The eigenvalues decomposition failed on backend {name}. You may"
+            " try using `diagonalize_method='svd'`, or `solver_params={"
+            "'diagonalize_method': 'svd'}` if called through the class API."
+        ),
+    )
 
 except AttributeError:
     # torch.__version__ < 1.8

@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 
 from himalaya.kernel_ridge import generate_dirichlet_samples
-kernel_weights = generate_dirichlet_samples(10000, n_kernels=3,
-                                            concentration=[1.], random_state=0)
+
+kernel_weights = generate_dirichlet_samples(
+    10000, n_kernels=3, concentration=[1.0], random_state=0
+)
 pca = PCA(2).fit(kernel_weights)
 
 darkgreen = "#446455"
@@ -23,15 +25,29 @@ def plot_simplex(bias=(0, 0), ax=None):
 
     # Faces
     ax.add_patch(
-        Polygon(corners[:2].T + bias, closed=True, edgecolor=None, fill=True,
-                facecolor=white, alpha=0.6))
+        Polygon(
+            corners[:2].T + bias,
+            closed=True,
+            edgecolor=None,
+            fill=True,
+            facecolor=white,
+            alpha=0.6,
+        )
+    )
     # Edges
     ax.add_patch(
-        Polygon(corners[:2].T + bias, closed=True, edgecolor=darkgreen,
-                fill=False, alpha=1, linewidth=2))
+        Polygon(
+            corners[:2].T + bias,
+            closed=True,
+            edgecolor=darkgreen,
+            fill=False,
+            alpha=1,
+            linewidth=2,
+        )
+    )
 
-    ax.axis('equal')
-    ax.axis('off')
+    ax.axis("equal")
+    ax.axis("off")
     return ax
 
 
@@ -43,4 +59,4 @@ for factor in np.linspace(2, 0, 3):
     plot_simplex(bias_, ax=ax)
 
 ax.text(-0.4, -1, "himalaya", fontsize=20, color=darkgreen)
-fig.savefig("logo.svg", bbox_inches='tight', pad_inches=0)
+fig.savefig("logo.svg", bbox_inches="tight", pad_inches=0)

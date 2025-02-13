@@ -219,15 +219,17 @@ def make_column_transformer_no_stack(*transformers, **kwargs):
     """
     # transformer_weights keyword is not passed through because the user
     # would need to know the automatically generated names of the transformers
-    n_jobs = kwargs.pop('n_jobs', None)
-    remainder = kwargs.pop('remainder', 'drop')
-    verbose = kwargs.pop('verbose', False)
+    n_jobs = kwargs.pop("n_jobs", None)
+    remainder = kwargs.pop("remainder", "drop")
+    verbose = kwargs.pop("verbose", False)
     if kwargs:
-        raise TypeError('Unknown keyword arguments: "{}"'.format(
-            list(kwargs.keys())[0]))
+        raise TypeError(
+            'Unknown keyword arguments: "{}"'.format(list(kwargs.keys())[0])
+        )
     transformer_list = _get_transformer_list(transformers)
-    return ColumnTransformerNoStack(transformer_list, n_jobs=n_jobs,
-                                    remainder=remainder, verbose=verbose)
+    return ColumnTransformerNoStack(
+        transformer_list, n_jobs=n_jobs, remainder=remainder, verbose=verbose
+    )
 
 
 def _get_transformer_list(estimators):

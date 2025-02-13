@@ -21,6 +21,7 @@ This method can be used for example in the following workflow:
 - fit a WeightedKernelRidge from the saved hyper-parameters, for further use of
   the model (prediction, interpretation, etc.).
 """
+
 import numpy as np
 
 from himalaya.backend import set_backend
@@ -31,7 +32,8 @@ from himalaya.utils import generate_multikernel_dataset
 
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-set_config(display='diagram')
+
+set_config(display="diagram")
 
 ###############################################################################
 # In this example, we use the ``torch_cuda`` backend (GPU).
@@ -46,11 +48,15 @@ backend = set_backend("torch_cuda", on_error="warn")
 # - Y_train : array of shape (n_samples_train, n_targets)
 # - Y_test : array of shape (n_samples_test, n_targets)
 
-(X_train, X_test, Y_train, Y_test, kernel_weights,
- n_features_list) = generate_multikernel_dataset(n_kernels=4, n_targets=500,
-                                                 n_samples_train=1000,
-                                                 n_samples_test=400,
-                                                 random_state=42)
+(X_train, X_test, Y_train, Y_test, kernel_weights, n_features_list) = (
+    generate_multikernel_dataset(
+        n_kernels=4,
+        n_targets=500,
+        n_samples_train=1000,
+        n_samples_test=400,
+        random_state=42,
+    )
+)
 
 ###############################################################################
 # Prepare the pipeline
@@ -59,13 +65,13 @@ backend = set_backend("torch_cuda", on_error="warn")
 # Find the start and end of each feature space X in Xs
 start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
 slices = [
-    slice(start, end)
-    for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
 ]
 
 # Create a different ``Kernelizer`` for each feature space.
-kernelizers = [("space %d" % ii, Kernelizer(), slice_)
-               for ii, slice_ in enumerate(slices)]
+kernelizers = [
+    ("space %d" % ii, Kernelizer(), slice_) for ii, slice_ in enumerate(slices)
+]
 column_kernelizer = ColumnKernelizer(kernelizers)
 
 ###############################################################################
@@ -108,10 +114,8 @@ test_scores_2 = backend.to_numpy(test_scores_2)
 import matplotlib.pyplot as plt
 
 plt.figure(figsize=(4, 3))
-plt.hist(test_scores_2, np.linspace(0, 1, 30), alpha=0.7,
-         label="Default deltas")
-plt.hist(test_scores_1, np.linspace(0, 1, 30), alpha=0.7,
-         label="Ground truth deltas")
+plt.hist(test_scores_2, np.linspace(0, 1, 30), alpha=0.7, label="Default deltas")
+plt.hist(test_scores_1, np.linspace(0, 1, 30), alpha=0.7, label="Ground truth deltas")
 plt.xlabel("$R^2$ generalization score")
 plt.ylabel("Number of voxels")
 plt.legend()

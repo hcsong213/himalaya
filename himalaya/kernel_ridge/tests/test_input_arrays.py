@@ -30,16 +30,15 @@ def _create_dataset(backend):
     Ys = backend.stack([X @ w for X, w in zip(Xs, ws)])
     Y = Ys.sum(0)
 
-    gammas = backend.asarray(backend.rand(n_gammas, Ks.shape[0]),
-                             backend.float64)
+    gammas = backend.asarray(backend.rand(n_gammas, Ks.shape[0]), backend.float64)
     gammas /= gammas.sum(1)[:, None]
 
     return Ks, Y, gammas
 
 
-@pytest.mark.parametrize('Ks_in_cpu', [True, False])
-@pytest.mark.parametrize('Y_in_cpu', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("Ks_in_cpu", [True, False])
+@pytest.mark.parametrize("Y_in_cpu", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_random_search(backend, Ks_in_cpu, Y_in_cpu):
     backend = set_backend(backend)
 
@@ -49,25 +48,29 @@ def test_random_search(backend, Ks_in_cpu, Y_in_cpu):
     cv = sklearn.model_selection.check_cv(2)
 
     for Ks_, Y_, gammas_, alphas_ in itertools.product(
-        [Ks, backend.to_numpy(Ks),
-         backend.to_cpu(Ks)],
+        [Ks, backend.to_numpy(Ks), backend.to_cpu(Ks)],
         [Y, backend.to_numpy(Y), backend.to_cpu(Y)],
-        [gammas, backend.to_numpy(gammas),
-         backend.to_cpu(gammas), 2],
-        [alphas, backend.to_numpy(alphas),
-         backend.to_cpu(alphas)],
+        [gammas, backend.to_numpy(gammas), backend.to_cpu(gammas), 2],
+        [alphas, backend.to_numpy(alphas), backend.to_cpu(alphas)],
     ):
 
         deltas, _, _ = solve_multiple_kernel_ridge_random_search(
-            Ks_, Y_, n_iter=gammas_, alphas=alphas_, cv=cv, progress_bar=False,
-            Ks_in_cpu=Ks_in_cpu, Y_in_cpu=Y_in_cpu)
+            Ks_,
+            Y_,
+            n_iter=gammas_,
+            alphas=alphas_,
+            cv=cv,
+            progress_bar=False,
+            Ks_in_cpu=Ks_in_cpu,
+            Y_in_cpu=Y_in_cpu,
+        )
 
         assert deltas.dtype == Ks.dtype
         assert getattr(deltas, "device", None) == getattr(Ks, "device", None)
 
 
-@pytest.mark.parametrize('Y_in_cpu', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("Y_in_cpu", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_hyper_gradient(backend, Y_in_cpu):
     backend = set_backend(backend)
 
@@ -75,13 +78,13 @@ def test_hyper_gradient(backend, Y_in_cpu):
     cv = sklearn.model_selection.check_cv(2)
 
     for Ks_, Y_ in itertools.product(
-        [Ks, backend.to_numpy(Ks),
-         backend.to_cpu(Ks)],
+        [Ks, backend.to_numpy(Ks), backend.to_cpu(Ks)],
         [Y, backend.to_numpy(Y), backend.to_cpu(Y)],
     ):
 
         deltas, _, _ = solve_multiple_kernel_ridge_hyper_gradient(
-            Ks_, Y_, max_iter=1, cv=cv, progress_bar=False, Y_in_cpu=Y_in_cpu)
+            Ks_, Y_, max_iter=1, cv=cv, progress_bar=False, Y_in_cpu=Y_in_cpu
+        )
 
         assert deltas.dtype == Ks.dtype
         assert getattr(deltas, "device", None) == getattr(Ks, "device", None)

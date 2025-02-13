@@ -72,11 +72,19 @@ class SparseGroupLassoCV(MultiOutputMixin, RegressorMixin, BaseEstimator):
     >>> clf.fit(X, Y)
     SparseGroupLassoCV()
     """
+
     ALL_SOLVERS = dict(proximal_gradient=solve_sparse_group_lasso_cv)
 
-    def __init__(self, groups=None, l1_regs=[0], l21_regs=[0],
-                 solver="proximal_gradient", solver_params=None, cv=5,
-                 force_cpu=False):
+    def __init__(
+        self,
+        groups=None,
+        l1_regs=[0],
+        l21_regs=[0],
+        solver="proximal_gradient",
+        solver_params=None,
+        cv=5,
+        force_cpu=False,
+    ):
         self.groups = groups
         self.l1_regs = l1_regs
         self.l21_regs = l21_regs
@@ -114,9 +122,14 @@ class SparseGroupLassoCV(MultiOutputMixin, RegressorMixin, BaseEstimator):
             y = y[:, None]
             ravel = True
 
-        results = self._call_solver(X=X, Y=y, groups=self.groups, cv=cv,
-                                    l21_regs=self.l21_regs,
-                                    l1_regs=self.l1_regs)
+        results = self._call_solver(
+            X=X,
+            Y=y,
+            groups=self.groups,
+            cv=cv,
+            l21_regs=self.l21_regs,
+            l1_regs=self.l1_regs,
+        )
         self.coef_, self.best_l21_reg_, self.best_l1_reg_ = results[:3]
         self.cv_scores_ = results[3]
 
@@ -133,13 +146,13 @@ class SparseGroupLassoCV(MultiOutputMixin, RegressorMixin, BaseEstimator):
         solver_params = self.solver_params or {}
 
         # check duplicated parameters
-        intersection = set(direct_params.keys()).intersection(
-            set(solver_params.keys()))
+        intersection = set(direct_params.keys()).intersection(set(solver_params.keys()))
         if intersection:
             raise ValueError(
-                'Parameters %s should not be given in solver_params, since '
-                'they are either fixed or have a direct parameter in %s.' %
-                (intersection, self.__class__.__name__))
+                "Parameters %s should not be given in solver_params, since "
+                "they are either fixed or have a direct parameter in %s."
+                % (intersection, self.__class__.__name__)
+            )
 
         return function(**direct_params, **solver_params)
 
@@ -161,8 +174,7 @@ class SparseGroupLassoCV(MultiOutputMixin, RegressorMixin, BaseEstimator):
         check_is_fitted(self)
         X = check_array(X, dtype=self.dtype_, accept_sparse=False, ndim=2)
         if X.shape[1] != self.n_features_in_:
-            raise ValueError(
-                'Different number of features in X than during fit.')
+            raise ValueError("Different number of features in X than during fit.")
         Y_hat = backend.to_numpy(X) @ backend.to_numpy(self.coef_)
         return backend.asarray_like(Y_hat, ref=X)
 
@@ -192,4 +204,4 @@ class SparseGroupLassoCV(MultiOutputMixin, RegressorMixin, BaseEstimator):
             return r2_score(y_true, y_pred)
 
     def _more_tags(self):
-        return {'requires_y': True}
+        return {"requires_y": True}

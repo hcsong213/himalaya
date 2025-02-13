@@ -34,18 +34,23 @@ n_kernels = 3
 n_targets = 50
 kernel_weights = np.tile(np.array([0.5, 0.3, 0.2])[None], (n_targets, 1))
 
-(X_train, X_test, Y_train, Y_test,
- kernel_weights, n_features_list) = generate_multikernel_dataset(
-     n_kernels=n_kernels, n_targets=n_targets, n_samples_train=600,
-     n_samples_test=300, kernel_weights=kernel_weights, random_state=42)
+(X_train, X_test, Y_train, Y_test, kernel_weights, n_features_list) = (
+    generate_multikernel_dataset(
+        n_kernels=n_kernels,
+        n_targets=n_targets,
+        n_samples_train=600,
+        n_samples_test=300,
+        kernel_weights=kernel_weights,
+        random_state=42,
+    )
+)
 
 feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 
 # Find the start and end of each feature space X in Xs
 start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
 slices = [
-    slice(start, end)
-    for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
 ]
 Xs_train = [X_train[:, slic] for slic in slices]
 Xs_test = [X_test[:, slic] for slic in slices]
@@ -60,7 +65,8 @@ Ks_train = backend.asarray(Ks_train, dtype=backend.float32)
 Y_train = backend.asarray(Y_train, dtype=backend.float32)
 
 Ks_test = backend.stack(
-    [X_test @ X_train.T for X_train, X_test in zip(Xs_train, Xs_test)])
+    [X_test @ X_train.T for X_train, X_test in zip(Xs_train, Xs_test)]
+)
 Ks_test = backend.asarray(Ks_test, dtype=backend.float32)
 Y_test = backend.asarray(Y_test, dtype=backend.float32)
 
@@ -93,7 +99,7 @@ n_alphas_batch = 20
 # To mitigate this, you can reduce ``n_targets_batch`` in the refit
 # using ```n_targets_batch_refit``.
 # If you don't need the dual weights, use ``return_weights = None``.
-return_weights = 'dual'
+return_weights = "dual"
 n_targets_batch_refit = 200
 
 ###############################################################################
@@ -137,7 +143,7 @@ cv_scores = backend.to_numpy(results[2])
 current_max = np.maximum.accumulate(cv_scores, axis=0)
 mean_current_max = np.mean(current_max, axis=1)
 x_array = np.arange(1, len(mean_current_max) + 1)
-plt.plot(x_array, mean_current_max, '-o')
+plt.plot(x_array, mean_current_max, "-o")
 plt.grid("on")
 plt.xlabel("Number of kernel weights sampled")
 plt.ylabel("L2 negative loss (higher is better)")
@@ -152,7 +158,7 @@ plt.show()
 # This plot is helpful to refine the alpha grid if the range is too small or
 # too large.
 
-best_alphas = 1. / np.sum(np.exp(deltas), axis=0)
+best_alphas = 1.0 / np.sum(np.exp(deltas), axis=0)
 plot_alphas_diagnostic(best_alphas, alphas)
 plt.title("Best alphas selected by cross-validation")
 plt.show()
@@ -164,8 +170,14 @@ plt.show()
 
 split = False
 scores = predict_and_score_weighted_kernel_ridge(
-    Ks_test, dual_weights, deltas, Y_test, split=split,
-    n_targets_batch=n_targets_batch, score_func=r2_score_split)
+    Ks_test,
+    dual_weights,
+    deltas,
+    Y_test,
+    split=split,
+    n_targets_batch=n_targets_batch,
+    score_func=r2_score_split,
+)
 scores = backend.to_numpy(scores)
 
 plt.hist(scores, np.linspace(0, 1, 50))
@@ -184,13 +196,23 @@ plt.show()
 
 split = True
 scores_split = predict_and_score_weighted_kernel_ridge(
-    Ks_test, dual_weights, deltas, Y_test, split=split,
-    n_targets_batch=n_targets_batch, score_func=r2_score_split)
+    Ks_test,
+    dual_weights,
+    deltas,
+    Y_test,
+    split=split,
+    n_targets_batch=n_targets_batch,
+    score_func=r2_score_split,
+)
 scores_split = backend.to_numpy(scores_split)
 
 for kk, score in enumerate(scores_split):
-    plt.hist(score, np.linspace(0, np.max(scores_split), 50), alpha=0.7,
-             label="kernel %d" % kk)
+    plt.hist(
+        score,
+        np.linspace(0, np.max(scores_split), 50),
+        alpha=0.7,
+        label="kernel %d" % kk,
+    )
 plt.title(r"Histogram of $R^2$ generalization score split between kernels")
 plt.legend()
 plt.show()

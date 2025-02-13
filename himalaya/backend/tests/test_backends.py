@@ -6,16 +6,16 @@ from himalaya.backend._utils import _dtype_to_str
 from himalaya.utils import assert_array_almost_equal
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_apply_argmax(backend):
     backend = set_backend(backend)
     for array in [
-            backend.randn(1),
-            backend.randn(10),
-            backend.randn(10, 1),
-            backend.randn(10, 4),
-            backend.randn(10, 1, 8),
-            backend.randn(10, 4, 8),
+        backend.randn(1),
+        backend.randn(10),
+        backend.randn(10, 1),
+        backend.randn(10, 4),
+        backend.randn(10, 1, 8),
+        backend.randn(10, 4, 8),
     ]:
         for axis in range(array.ndim):
             argmax = backend.argmax(array, axis=axis)
@@ -25,29 +25,28 @@ def test_apply_argmax(backend):
             )
 
 
-@pytest.mark.parametrize('dtype_str', ["float32", "float64"])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("dtype_str", ["float32", "float64"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_std_float64(backend, dtype_str):
     backend = set_backend(backend)
     for array in [
-            backend.randn(1),
-            backend.randn(10),
-            backend.randn(10, 1),
-            backend.randn(10, 4),
-            backend.randn(10, 1, 8),
-            backend.randn(10, 4, 8),
+        backend.randn(1),
+        backend.randn(10),
+        backend.randn(10, 1),
+        backend.randn(10, 4),
+        backend.randn(10, 1, 8),
+        backend.randn(10, 4, 8),
     ]:
         array = backend.asarray(array, dtype=dtype_str)
         array_64 = backend.asarray(array, dtype="float64")
         for axis in range(array.ndim):
             result = backend.std_float64(array, axis=axis)
-            reference = backend.to_numpy(array_64).std(axis=axis,
-                                                       dtype="float64")
+            reference = backend.to_numpy(array_64).std(axis=axis, dtype="float64")
             reference = backend.asarray(reference, dtype=dtype_str)
             assert_array_almost_equal(result, reference)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_diagonal_view(backend):
     backend = set_backend(backend)
     try:
@@ -58,40 +57,44 @@ def test_diagonal_view(backend):
     import numpy as np
 
     for array in [
-            backend.randn(10, 4),
-            backend.randn(10, 4).T,
-            backend.randn(10, 4, 8),
-            backend.randn(10, 4, 8).T,
-            backend.randn(3, 4, 8, 5),
+        backend.randn(10, 4),
+        backend.randn(10, 4).T,
+        backend.randn(10, 4, 8),
+        backend.randn(10, 4, 8).T,
+        backend.randn(3, 4, 8, 5),
     ]:
         for axis1 in range(array.ndim):
             for axis2 in range(array.ndim):
                 if axis1 != axis2:
-                    result = backend.diagonal_view(array, axis1=axis1,
-                                                   axis2=axis2)
+                    result = backend.diagonal_view(array, axis1=axis1, axis2=axis2)
                     # compare with torch diagonal
                     reference = torch.diagonal(
-                        torch.from_numpy(backend.to_numpy(array)), dim1=axis1,
-                        dim2=axis2)
+                        torch.from_numpy(backend.to_numpy(array)),
+                        dim1=axis1,
+                        dim2=axis2,
+                    )
                     assert_array_almost_equal(result, reference)
                     # compare with numpy diagonal
-                    reference = np.diagonal(backend.to_numpy(array),
-                                            axis1=axis1, axis2=axis2)
+                    reference = np.diagonal(
+                        backend.to_numpy(array), axis1=axis1, axis2=axis2
+                    )
                     assert_array_almost_equal(result, reference)
                     # test that this is a modifiable view
                     result += 1
-                    reference = np.diagonal(backend.to_numpy(array),
-                                            axis1=axis1, axis2=axis2)
+                    reference = np.diagonal(
+                        backend.to_numpy(array), axis1=axis1, axis2=axis2
+                    )
                     assert_array_almost_equal(result, reference)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_eigh(backend):
     import scipy.linalg
+
     backend = set_backend(backend)
 
     array = backend.randn(10, 20)
-    array = backend.asarray(array, dtype='float64')
+    array = backend.asarray(array, dtype="float64")
     kernel = array @ array.T
 
     values, vectors = backend.eigh(kernel)
@@ -108,11 +111,12 @@ def test_eigh(backend):
             assert_array_almost_equal(vectors[:, ii], -vectors_ref[:, ii])
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
-@pytest.mark.parametrize('full_matrices', [True, False])
-@pytest.mark.parametrize('three_dim', [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
+@pytest.mark.parametrize("full_matrices", [True, False])
+@pytest.mark.parametrize("three_dim", [True, False])
 def test_svd(backend, full_matrices, three_dim):
     import numpy.linalg
+
     backend = set_backend(backend)
 
     if three_dim:
@@ -120,11 +124,12 @@ def test_svd(backend, full_matrices, three_dim):
     else:
         array = backend.randn(5, 7)
 
-    array = backend.asarray(array, dtype='float64')
+    array = backend.asarray(array, dtype="float64")
 
     U, s, V = backend.svd(array, full_matrices=full_matrices)
-    U_ref, s_ref, V_ref = numpy.linalg.svd(backend.to_numpy(array),
-                                           full_matrices=full_matrices)
+    U_ref, s_ref, V_ref = numpy.linalg.svd(
+        backend.to_numpy(array), full_matrices=full_matrices
+    )
 
     assert_array_almost_equal(s, s_ref)
 
@@ -147,8 +152,8 @@ def test_svd(backend, full_matrices, three_dim):
                 assert_array_almost_equal(V[kk, ii, :], -V_ref[kk, ii, :])
 
 
-@pytest.mark.parametrize('backend_out', ALL_BACKENDS)
-@pytest.mark.parametrize('backend_in', ALL_BACKENDS)
+@pytest.mark.parametrize("backend_out", ALL_BACKENDS)
+@pytest.mark.parametrize("backend_in", ALL_BACKENDS)
 def test_changed_backend_asarray(backend_in, backend_out):
     backend = set_backend(backend_in)
     array_in = backend.asarray([1.2, 2.4, 4.8])
@@ -172,16 +177,17 @@ def test_changed_backend_asarray(backend_in, backend_out):
 
     # test check_arrays
     array_out3, array_out4, array_out5 = backend.check_arrays(
-        array_in, array_in, [array_in])
+        array_in, array_in, [array_in]
+    )
     assert array_out.__class__ == array_out3.__class__
     assert array_out.__class__ == array_out4.__class__
     assert array_out.__class__ == array_out5[0].__class__
 
 
-@pytest.mark.parametrize('dtype_out', ["float32", "float64"])
-@pytest.mark.parametrize('dtype_in', ["float32", "float64"])
-@pytest.mark.parametrize('backend_out', ALL_BACKENDS)
-@pytest.mark.parametrize('backend_in', ALL_BACKENDS)
+@pytest.mark.parametrize("dtype_out", ["float32", "float64"])
+@pytest.mark.parametrize("dtype_in", ["float32", "float64"])
+@pytest.mark.parametrize("backend_out", ALL_BACKENDS)
+@pytest.mark.parametrize("backend_in", ALL_BACKENDS)
 def test_asarray_dtype(backend_in, backend_out, dtype_in, dtype_out):
     backend = set_backend(backend_in)
     array_in = backend.asarray([1.2, 2.4, 4.8], dtype=dtype_in)

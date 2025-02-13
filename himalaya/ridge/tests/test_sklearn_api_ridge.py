@@ -23,9 +23,9 @@ def _create_dataset(backend):
     return X, Y
 
 
-@pytest.mark.parametrize('multitarget', [True, False])
-@pytest.mark.parametrize('fit_intercept', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("multitarget", [True, False])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_ridge_vs_scikit_learn(backend, multitarget, fit_intercept):
     backend = set_backend(backend)
     X, Y = _create_dataset(backend)
@@ -40,29 +40,30 @@ def test_ridge_vs_scikit_learn(backend, multitarget, fit_intercept):
         model = Ridge(alpha=alpha, fit_intercept=fit_intercept)
         model.fit(X, Y)
 
-        reference = sklearn.linear_model.Ridge(alpha=backend.to_numpy(alpha),
-                                               fit_intercept=fit_intercept)
+        reference = sklearn.linear_model.Ridge(
+            alpha=backend.to_numpy(alpha), fit_intercept=fit_intercept
+        )
         reference.fit(backend.to_numpy(X), backend.to_numpy(Y))
 
         if multitarget:
             assert model.coef_.shape == (X.shape[1], Y.shape[1])
         else:
-            assert model.coef_.shape == (X.shape[1], )
+            assert model.coef_.shape == (X.shape[1],)
 
         assert_array_almost_equal(model.coef_, reference.coef_.T)
         if fit_intercept:
-            assert_array_almost_equal(model.intercept_, reference.intercept_,
-                                      decimal=5)
-        assert_array_almost_equal(model.predict(X),
-                                  reference.predict(backend.to_numpy(X)),
-                                  decimal=5)
+            assert_array_almost_equal(model.intercept_, reference.intercept_, decimal=5)
+        assert_array_almost_equal(
+            model.predict(X), reference.predict(backend.to_numpy(X)), decimal=5
+        )
         assert_array_almost_equal(
             model.score(X, Y).mean(),
-            reference.score(backend.to_numpy(X), backend.to_numpy(Y)))
+            reference.score(backend.to_numpy(X), backend.to_numpy(Y)),
+        )
 
 
-@pytest.mark.parametrize('fit_intercept', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_ridge_cv_vs_scikit_learn(backend, fit_intercept):
     backend = set_backend(backend)
     X, Y = _create_dataset(backend)
@@ -74,27 +75,31 @@ def test_ridge_cv_vs_scikit_learn(backend, fit_intercept):
 
     alphas = backend.asarray_like(backend.logspace(-2, 3, 21), y)
 
-    model = RidgeCV(alphas=alphas, cv=5, fit_intercept=fit_intercept,
-                    solver_params=dict(score_func=r2_score))
+    model = RidgeCV(
+        alphas=alphas,
+        cv=5,
+        fit_intercept=fit_intercept,
+        solver_params=dict(score_func=r2_score),
+    )
     model.fit(X, y)
 
-    reference = sklearn.linear_model.RidgeCV(alphas=backend.to_numpy(alphas),
-                                             fit_intercept=fit_intercept, cv=5)
+    reference = sklearn.linear_model.RidgeCV(
+        alphas=backend.to_numpy(alphas), fit_intercept=fit_intercept, cv=5
+    )
     reference.fit(backend.to_numpy(X), backend.to_numpy(y))
-    assert model.coef_.shape == (X.shape[1], )
+    assert model.coef_.shape == (X.shape[1],)
 
-    assert_array_almost_equal(model.best_alphas_[0], reference.alpha_,
-                              decimal=5)
+    assert_array_almost_equal(model.best_alphas_[0], reference.alpha_, decimal=5)
     assert_array_almost_equal(model.coef_, reference.coef_.T)
-    assert_array_almost_equal(model.predict(X),
-                              reference.predict(backend.to_numpy(X)))
+    assert_array_almost_equal(model.predict(X), reference.predict(backend.to_numpy(X)))
     assert_array_almost_equal(
         model.score(X, y).mean(),
-        reference.score(backend.to_numpy(X), backend.to_numpy(y)))
+        reference.score(backend.to_numpy(X), backend.to_numpy(y)),
+    )
 
 
-@pytest.mark.parametrize('fit_intercept', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_banded_ridge_cv_vs_ridge_cv(backend, fit_intercept):
     backend = set_backend(backend)
     X, Y = _create_dataset(backend)
@@ -105,8 +110,12 @@ def test_banded_ridge_cv_vs_ridge_cv(backend, fit_intercept):
     ref = RidgeCV(alphas=alphas, cv=5, fit_intercept=fit_intercept)
     ref.fit(X, Y)
 
-    model = GroupRidgeCV(groups=None, solver_params=dict(alphas=alphas), cv=5,
-                         fit_intercept=fit_intercept)
+    model = GroupRidgeCV(
+        groups=None,
+        solver_params=dict(alphas=alphas),
+        cv=5,
+        fit_intercept=fit_intercept,
+    )
     model.fit(X, Y)
 
     assert_array_almost_equal(model.best_alphas_, ref.best_alphas_)
@@ -115,7 +124,7 @@ def test_banded_ridge_cv_vs_ridge_cv(backend, fit_intercept):
     assert_array_almost_equal(model.score(X, Y), ref.score(X, Y))
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_group_ridge_split_score(backend):
     backend = set_backend(backend)
     X, Y = _create_dataset(backend)
@@ -123,8 +132,9 @@ def test_group_ridge_split_score(backend):
     groups = backend.randn(X.shape[1]) > 0
     alphas = backend.asarray_like(backend.logspace(-2, 3, 21), Y)
 
-    model = GroupRidgeCV(groups=groups,
-                         solver_params=dict(alphas=alphas, progress_bar=False))
+    model = GroupRidgeCV(
+        groups=groups, solver_params=dict(alphas=alphas, progress_bar=False)
+    )
     model.fit(X, Y)
     score = model.score(X, Y)
     score_split = model.score(X, Y, split=True)
@@ -151,14 +161,14 @@ class Ridge_(Ridge):
     def score(self, X, y):
         from himalaya.validation import check_array
         from himalaya.scoring import r2_score
+
         backend = get_backend()
 
         y_pred = super().predict(X)
         y_true = check_array(y, dtype=self.dtype_, ndim=self.coef_.ndim)
 
         if y_true.ndim == 1:
-            return backend.to_numpy(
-                r2_score(y_true[:, None], y_pred[:, None])[0])
+            return backend.to_numpy(r2_score(y_true[:, None], y_pred[:, None])[0])
         else:
             return backend.to_numpy(r2_score(y_true, y_pred))
 
@@ -169,10 +179,10 @@ class RidgeCV_(RidgeCV):
     Used for testing only.
     """
 
-    def __init__(self, alphas=(0.1, 1), solver="svd", solver_params=None,
-                 cv=2):
-        super().__init__(alphas=alphas, solver=solver,
-                         solver_params=solver_params, cv=cv)
+    def __init__(self, alphas=(0.1, 1), solver="svd", solver_params=None, cv=2):
+        super().__init__(
+            alphas=alphas, solver=solver, solver_params=solver_params, cv=cv
+        )
 
     def predict(self, X):
         backend = get_backend()
@@ -181,14 +191,14 @@ class RidgeCV_(RidgeCV):
     def score(self, X, y):
         from himalaya.validation import check_array
         from himalaya.scoring import r2_score
+
         backend = get_backend()
 
         y_pred = super().predict(X)
         y_true = check_array(y, dtype=self.dtype_, ndim=self.coef_.ndim)
 
         if y_true.ndim == 1:
-            return backend.to_numpy(
-                r2_score(y_true[:, None], y_pred[:, None])[0])
+            return backend.to_numpy(r2_score(y_true[:, None], y_pred[:, None])[0])
         else:
             return backend.to_numpy(r2_score(y_true, y_pred))
 
@@ -206,11 +216,21 @@ class GroupRidgeCV_(GroupRidgeCV):
     Used for testing only.
     """
 
-    def __init__(self, groups=None, solver="random_search", solver_params=None,
-                 cv=2, random_state=0):
-        super().__init__(groups=groups, solver=solver,
-                         solver_params=solver_params, cv=cv,
-                         random_state=random_state)
+    def __init__(
+        self,
+        groups=None,
+        solver="random_search",
+        solver_params=None,
+        cv=2,
+        random_state=0,
+    ):
+        super().__init__(
+            groups=groups,
+            solver=solver,
+            solver_params=solver_params,
+            cv=cv,
+            random_state=random_state,
+        )
 
     def predict(self, X, split=False):
         backend = get_backend()
@@ -221,12 +241,14 @@ class GroupRidgeCV_(GroupRidgeCV):
         return backend.to_numpy(super().score(X, y, split=split))
 
 
-@sklearn.utils.estimator_checks.parametrize_with_checks([
-    Ridge_(),
-    RidgeCV_(),
-    GroupRidgeCV_(),
-])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@sklearn.utils.estimator_checks.parametrize_with_checks(
+    [
+        Ridge_(),
+        RidgeCV_(),
+        GroupRidgeCV_(),
+    ]
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_check_estimator(estimator, check, backend):
     backend = set_backend(backend)
     check(estimator)

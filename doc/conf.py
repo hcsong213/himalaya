@@ -31,15 +31,15 @@ from sphinx_gallery.sorting import FileNameSortKey
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'numpydoc',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'sphinx_gallery.gen_gallery',
-    'sphinxcontrib.mermaid',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "numpydoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.githubpages",
+    "sphinx_gallery.gen_gallery",
+    "sphinxcontrib.mermaid",
 ]
 
 # generate autosummary even if no references
@@ -48,35 +48,35 @@ autosummary_generate = True
 # Sphinx-gallery
 sphinx_gallery_conf = {
     # path to your examples scripts
-    'examples_dirs': '../examples',
+    "examples_dirs": "../examples",
     # path where to save gallery generated examples
-    'gallery_dirs': '_auto_examples',
+    "gallery_dirs": "_auto_examples",
     # which files to execute? only those with "plot_"
-    'filename_pattern': 'plot_',
+    "filename_pattern": "plot_",
     # 'ignore_pattern': 'download',
-    'within_subsection_order': FileNameSortKey,
-    'remove_config_comments': 'True',
-    'plot_gallery': 'True',
-    'thumbnail_size': (480, 250),
-    'download_all_examples': False,
+    "within_subsection_order": FileNameSortKey,
+    "remove_config_comments": "True",
+    "plot_gallery": "True",
+    "thumbnail_size": (480, 250),
+    "download_all_examples": False,
 }
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['static']
+templates_path = ["static"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The main toctree document.
-main_doc = 'index'
+main_doc = "index"
 
 # General information about the project.
-project = u'Himalaya'
-copyright = u'2023, Gallant lab'
-author = u'Tom Dupre la Tour'
+project = "Himalaya"
+copyright = "2023, Gallant lab"
+author = "Tom Dupre la Tour"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -84,6 +84,7 @@ author = u'Tom Dupre la Tour'
 #
 # The short X.Y version.
 import himalaya
+
 version = himalaya.__version__
 # The full version, including alpha/beta/rc tags.
 release = himalaya.__version__
@@ -98,10 +99,10 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
@@ -111,27 +112,27 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = "alabaster"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'github_user': 'gallantlab',
-    'github_repo': 'himalaya',
-    'github_type': 'star',
-    'page_width': '1200px',
-    'sidebar_width': '235px',
-    'logo': 'logo.svg',
-    'logo_name': 'himalaya',
+    "github_user": "gallantlab",
+    "github_repo": "himalaya",
+    "github_type": "star",
+    "page_width": "1200px",
+    "sidebar_width": "235px",
+    "logo": "logo.svg",
+    "logo_name": "himalaya",
     # 'description': 'Himalaya',
-    'fixed_sidebar': 'True',
+    "fixed_sidebar": "True",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['static']
+html_static_path = ["static"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -139,18 +140,18 @@ html_static_path = ['static']
 # This is required for the alabaster theme
 # refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
 html_sidebars = {
-    '**': [
-        'about.html',
-        'relations.html',  # needs 'show_related': True theme option to display
-        'navigation.html',
-        'searchbox.html',
+    "**": [
+        "about.html",
+        "relations.html",  # needs 'show_related': True theme option to display
+        "navigation.html",
+        "searchbox.html",
     ]
 }
 
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Himalayadoc'
+htmlhelp_basename = "Himalayadoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -158,15 +159,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -176,15 +174,14 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (main_doc, 'Himalaya.tex', u'Himalaya Documentation', u'Gallant lab',
-     'manual'),
+    (main_doc, "Himalaya.tex", "Himalaya Documentation", "Gallant lab", "manual"),
 ]
 
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(main_doc, 'himalaya', u'Himalaya Documentation', [author], 1)]
+man_pages = [(main_doc, "himalaya", "Himalaya Documentation", [author], 1)]
 
 # -- Options for Texinfo output -------------------------------------------
 
@@ -192,9 +189,16 @@ man_pages = [(main_doc, 'himalaya', u'Himalaya Documentation', [author], 1)]
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (main_doc, 'Himalaya', u'Himalaya Documentation', author, 'Himalaya',
-     'One line description of project.', 'Miscellaneous'),
+    (
+        main_doc,
+        "Himalaya",
+        "Himalaya Documentation",
+        author,
+        "Himalaya",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {"https://docs.python.org/": None}

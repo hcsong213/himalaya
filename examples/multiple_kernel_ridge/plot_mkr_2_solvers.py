@@ -21,6 +21,7 @@ computes a hyper-gradient descent for each target, it is more expensive
 computationally for large number of targets. However, the hyper-gradient
 descent scales very well with the number of kernels.
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -35,7 +36,8 @@ from himalaya.utils import generate_multikernel_dataset
 
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-set_config(display='diagram')
+
+set_config(display="diagram")
 
 # sphinx_gallery_thumbnail_number = 4
 ###############################################################################
@@ -55,9 +57,9 @@ n_clusters = 2
 
 ###############################################################################
 # To create some clusters of weights, we take a few kernel weights samples.
-kernel_weights = generate_dirichlet_samples(n_clusters, n_kernels,
-                                            concentration=[.3],
-                                            random_state=105)
+kernel_weights = generate_dirichlet_samples(
+    n_clusters, n_kernels, concentration=[0.3], random_state=105
+)
 
 ###############################################################################
 # Then, we duplicate them, and add some noise, to get clusters.
@@ -67,7 +69,7 @@ kernel_weights = np.tile(kernel_weights, (n_targets // n_clusters, 1))
 kernel_weights += np.random.randn(n_targets, n_kernels) * noise
 
 # We finish with a projection on the simplex, making kernel weights sum to one.
-kernel_weights[kernel_weights < 0] = 0.
+kernel_weights[kernel_weights < 0] = 0.0
 kernel_weights /= np.sum(kernel_weights, 1)[:, None]
 
 ###############################################################################
@@ -78,10 +80,16 @@ kernel_weights /= np.sum(kernel_weights, 1)[:, None]
 # - Y_train : array of shape (n_samples_train, n_targets)
 # - Y_test : array of shape (n_samples_test, n_targets)
 
-(X_train, X_test, Y_train, Y_test,
- kernel_weights, n_features_list) = generate_multikernel_dataset(
-     n_kernels=n_kernels, n_targets=n_targets, n_samples_train=600,
-     n_samples_test=300, kernel_weights=kernel_weights, random_state=42)
+(X_train, X_test, Y_train, Y_test, kernel_weights, n_features_list) = (
+    generate_multikernel_dataset(
+        n_kernels=n_kernels,
+        n_targets=n_targets,
+        n_samples_train=600,
+        n_samples_test=300,
+        kernel_weights=kernel_weights,
+        random_state=42,
+    )
+)
 
 feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 
@@ -94,12 +102,12 @@ feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 # Find the start and end of each feature space X in Xs
 start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
 slices = [
-    slice(start, end)
-    for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
 ]
 
-kernelizers = [(name, Kernelizer(), slice_)
-               for name, slice_ in zip(feature_names, slices)]
+kernelizers = [
+    (name, Kernelizer(), slice_) for name, slice_ in zip(feature_names, slices)
+]
 column_kernelizer = ColumnKernelizer(kernelizers)
 
 ###############################################################################
@@ -108,28 +116,39 @@ column_kernelizer = ColumnKernelizer(kernelizers)
 # We define the first model, using the random search solver.
 
 # (We pregenerate the Dirichlet random samples, to latter plot them.)
-kernel_weights_sampled = generate_dirichlet_samples(n_samples=20,
-                                                    n_kernels=n_kernels,
-                                                    concentration=[1.],
-                                                    random_state=0)
+kernel_weights_sampled = generate_dirichlet_samples(
+    n_samples=20, n_kernels=n_kernels, concentration=[1.0], random_state=0
+)
 
 alphas = np.logspace(-10, 10, 41)
-solver_params = dict(n_iter=kernel_weights_sampled, alphas=alphas,
-                     n_targets_batch=200, n_alphas_batch=20,
-                     n_targets_batch_refit=200, jitter_alphas=True)
+solver_params = dict(
+    n_iter=kernel_weights_sampled,
+    alphas=alphas,
+    n_targets_batch=200,
+    n_alphas_batch=20,
+    n_targets_batch_refit=200,
+    jitter_alphas=True,
+)
 
-model_1 = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search",
-                                solver_params=solver_params)
+model_1 = MultipleKernelRidgeCV(
+    kernels="precomputed", solver="random_search", solver_params=solver_params
+)
 
 ###############################################################################
 # We define the second model, using the hyper_gradient solver.
 
-solver_params = dict(max_iter=30, n_targets_batch=200, tol=1e-3,
-                     initial_deltas="ridgecv", max_iter_inner_hyper=1,
-                     hyper_gradient_method="direct")
+solver_params = dict(
+    max_iter=30,
+    n_targets_batch=200,
+    tol=1e-3,
+    initial_deltas="ridgecv",
+    max_iter_inner_hyper=1,
+    hyper_gradient_method="direct",
+)
 
-model_2 = MultipleKernelRidgeCV(kernels="precomputed", solver="hyper_gradient",
-                                solver_params=solver_params)
+model_2 = MultipleKernelRidgeCV(
+    kernels="precomputed", solver="hyper_gradient", solver_params=solver_params
+)
 
 ###############################################################################
 # We fit the two models on the train data.
@@ -154,7 +173,7 @@ current_max = np.maximum.accumulate(cv_scores, axis=0)
 mean_current_max = np.mean(current_max, axis=1)
 
 x_array = np.arange(1, len(mean_current_max) + 1)
-plt.plot(x_array, mean_current_max, '-o')
+plt.plot(x_array, mean_current_max, "-o")
 plt.grid("on")
 plt.xlabel("Number of kernel weights sampled")
 plt.ylabel("L2 negative loss (higher is better)")
@@ -168,7 +187,7 @@ cv_scores = backend.to_numpy(pipe_2[1].cv_scores_)
 mean_cv_scores = np.mean(cv_scores, axis=1)
 
 x_array = np.arange(1, len(mean_cv_scores) + 1)
-plt.plot(x_array, mean_cv_scores, '-o')
+plt.plot(x_array, mean_cv_scores, "-o")
 plt.grid("on")
 plt.xlabel("Number of gradient iterations")
 plt.ylabel("L2 negative loss (higher is better)")
@@ -201,10 +220,12 @@ scores_baseline = backend.to_numpy(scores_baseline)
 # Plot histograms
 bins = np.linspace(0, 1, 50)
 plt.hist(scores_baseline, bins, alpha=0.7, label="KernelRidgeCV")
-plt.hist(scores_1, bins, alpha=0.7,
-         label="MultipleKernelRidgeCV(solver='random_search')")
-plt.hist(scores_2, bins, alpha=0.7,
-         label="MultipleKernelRidgeCV(solver='hyper_gradient')")
+plt.hist(
+    scores_1, bins, alpha=0.7, label="MultipleKernelRidgeCV(solver='random_search')"
+)
+plt.hist(
+    scores_2, bins, alpha=0.7, label="MultipleKernelRidgeCV(solver='hyper_gradient')"
+)
 plt.xlabel(r"$R^2$ generalization score")
 plt.title("Histogram over targets")
 plt.legend()
@@ -217,12 +238,12 @@ plt.show()
 # trajectories.
 
 all_kernel_weights_2 = [
-    np.full((n_targets, n_kernels), fill_value=1. / n_kernels),
+    np.full((n_targets, n_kernels), fill_value=1.0 / n_kernels),
 ]
 max_iter = model_2.solver_params["max_iter"]
 for n_iter in np.unique(np.int_(np.logspace(0, np.log10(max_iter), 3))):
     # change the number of iteration and refit from scratch
-    pipe_2[1].solver_params['max_iter'] = n_iter
+    pipe_2[1].solver_params["max_iter"] = n_iter
     pipe_2.fit(X_train, Y_train)
 
     kernel_weights_2 = np.exp(backend.to_numpy(pipe_2[1].deltas_.T))
@@ -257,9 +278,10 @@ def _create_simplex_projection_and_edges(ax):
 
     # create a projection in 2D
     from sklearn.decomposition import PCA
-    kernel_weights = generate_dirichlet_samples(10000, n_kernels,
-                                                concentration=[1.],
-                                                random_state=0)
+
+    kernel_weights = generate_dirichlet_samples(
+        10000, n_kernels, concentration=[1.0], random_state=0
+    )
     pca = PCA(2).fit(backend.to_numpy(kernel_weights))
 
     # add simplex edges
@@ -268,9 +290,16 @@ def _create_simplex_projection_and_edges(ax):
 
     # add tripod at origin
     tripod_length = 0.15
-    tripod = np.array([[0, 0, 0], [tripod_length, 0, 0], [0, 0, 0],
-                       [0, tripod_length, 0], [0, 0, 0], [0, 0,
-                                                          tripod_length]])
+    tripod = np.array(
+        [
+            [0, 0, 0],
+            [tripod_length, 0, 0],
+            [0, 0, 0],
+            [0, tripod_length, 0],
+            [0, 0, 0],
+            [0, 0, tripod_length],
+        ]
+    )
     tripod = pca.transform(tripod).T
 
     # add point legend
@@ -278,16 +307,17 @@ def _create_simplex_projection_and_edges(ax):
     labels = points.copy()
     points = pca.transform(points * 1.15).T
     for (xx, yy), label in zip(points.T, labels):
-        ax.text(xx, yy, str(label), horizontalalignment='center',
-                verticalalignment='center')
+        ax.text(
+            xx, yy, str(label), horizontalalignment="center", verticalalignment="center"
+        )
 
     if ax is None:
         plt.figure(figsize=(8, 8))
         ax = plt.gca()
-    ax.plot(edges[0], edges[1], c='gray')
-    ax.plot(tripod[0], tripod[1], c='gray')
-    ax.axis('equal')
-    ax.axis('off')
+    ax.plot(edges[0], edges[1], c="gray")
+    ax.plot(tripod[0], tripod[1], c="gray")
+    ax.axis("equal")
+    ax.axis("off")
     return ax, pca
 
 
@@ -312,8 +342,7 @@ def plot_simplex_trajectory(Xs, ax=None):
     trajectories = np.array(trajectories)
 
     for trajectory in trajectories.T:
-        ax.plot(trajectory[0], trajectory[1], linewidth=1, color="C0",
-                zorder=1)
+        ax.plot(trajectory[0], trajectory[1], linewidth=1, color="C0", zorder=1)
         ax.scatter(trajectory[0, -1], trajectory[1, -1], color="C1", zorder=2)
 
     return ax
@@ -328,23 +357,25 @@ selection = slice(0, 50)
 # First panel
 ax = axs[0]
 ax.set_title("(a) Ground truth", y=0)
-plot_simplex(kernel_weights[selection], ax=ax, color='C2',
-             label="true weights")
+plot_simplex(kernel_weights[selection], ax=ax, color="C2", label="true weights")
 
 # Second panel
 ax = axs[1]
 ax.set_title("(b) Random search", y=0)
-plot_simplex(backend.to_numpy(kernel_weights_sampled), ax=ax, marker='+',
-             label="random candidates", zorder=10)
-plot_simplex(kernel_weights_1[selection], ax=axs[1],
-             label="selected candidates")
+plot_simplex(
+    backend.to_numpy(kernel_weights_sampled),
+    ax=ax,
+    marker="+",
+    label="random candidates",
+    zorder=10,
+)
+plot_simplex(kernel_weights_1[selection], ax=axs[1], label="selected candidates")
 
 # Third panel
 ax = axs[2]
 ax.set_title("(c) Gradient descent", y=0)
 plot_simplex_trajectory([aa[selection] for aa in all_kernel_weights_2], ax=ax)
-ax.legend([ax.lines[2], ax.collections[0]],
-          ['gradient trajectory', 'final point'])
+ax.legend([ax.lines[2], ax.collections[0]], ["gradient trajectory", "final point"])
 
 plt.tight_layout()
 # fig.savefig('simulation.pdf', dpi=150, bbox_inches='tight', pad_inches=0)

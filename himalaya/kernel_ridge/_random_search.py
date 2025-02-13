@@ -16,12 +16,29 @@ from ._kernels import KernelCenterer
 
 
 def solve_multiple_kernel_ridge_random_search(
-        Ks, Y, n_iter=100, concentration=[0.1, 1.0], alphas=1.0,
-        score_func=l2_neg_loss, cv=5, fit_intercept=False, return_weights=None,
-        Xs=None, local_alpha=True, jitter_alphas=False, random_state=None,
-        n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=None,
-        progress_bar=True, Ks_in_cpu=False, conservative=False, Y_in_cpu=False,
-        diagonalize_method="eigh", return_alphas=False):
+    Ks,
+    Y,
+    n_iter=100,
+    concentration=[0.1, 1.0],
+    alphas=1.0,
+    score_func=l2_neg_loss,
+    cv=5,
+    fit_intercept=False,
+    return_weights=None,
+    Xs=None,
+    local_alpha=True,
+    jitter_alphas=False,
+    random_state=None,
+    n_targets_batch=None,
+    n_targets_batch_refit=None,
+    n_alphas_batch=None,
+    progress_bar=True,
+    Ks_in_cpu=False,
+    conservative=False,
+    Y_in_cpu=False,
+    diagonalize_method="eigh",
+    return_alphas=False,
+):
     """Solve multiple kernel ridge regression using random search.
 
     Parameters
@@ -107,16 +124,18 @@ def solve_multiple_kernel_ridge_random_search(
     """
     backend = get_backend()
     if isinstance(n_iter, int):
-        gammas = generate_dirichlet_samples(n_samples=n_iter,
-                                            n_kernels=len(Ks),
-                                            concentration=concentration,
-                                            random_state=random_state)
+        gammas = generate_dirichlet_samples(
+            n_samples=n_iter,
+            n_kernels=len(Ks),
+            concentration=concentration,
+            random_state=random_state,
+        )
         gammas[0] = 1 / len(Ks)
     elif n_iter.ndim == 2:
         gammas = n_iter
         assert gammas.shape[1] == Ks.shape[0]
     else:
-        raise ValueError("Unknown parameter n_iter=%r." % (n_iter, ))
+        raise ValueError("Unknown parameter n_iter=%r." % (n_iter,))
 
     dtype = Ks.dtype
     gammas = backend.asarray(gammas, dtype=dtype)
@@ -124,23 +143,25 @@ def solve_multiple_kernel_ridge_random_search(
     Y = backend.asarray(Y, dtype=dtype, device="cpu" if Y_in_cpu else device)
 
     if isinstance(alphas, numbers.Number) or alphas.ndim == 0:
-        alphas = backend.ones_like(Y, shape=(1, )) * alphas
+        alphas = backend.ones_like(Y, shape=(1,)) * alphas
 
     gammas, alphas, Xs = backend.check_arrays(gammas, alphas, Xs)
-    Ks = backend.asarray(Ks, dtype=dtype,
-                         device="cpu" if Ks_in_cpu else device)
+    Ks = backend.asarray(Ks, dtype=dtype, device="cpu" if Ks_in_cpu else device)
 
     if fit_intercept:
-        if return_weights == 'dual':
+        if return_weights == "dual":
             Ks, Y, Ks_rows, Y_offset = _helper_intercept(Ks, Y)
-        elif return_weights == 'primal':
+        elif return_weights == "primal":
             raise NotImplementedError(
                 'Computing the intercept with return_weights="primal" is not'
-                'implemented. Use fit_intercept=False or'
-                'return_weights="dual".')
+                "implemented. Use fit_intercept=False or"
+                'return_weights="dual".'
+            )
         else:
-            raise ValueError(f'Cannot compute the intercept if return_weights'
-                             f'is equal to {return_weights}.')
+            raise ValueError(
+                f"Cannot compute the intercept if return_weights"
+                f"is equal to {return_weights}."
+            )
 
     n_samples, n_targets = Y.shape
     if n_targets_batch is None:
@@ -155,43 +176,45 @@ def solve_multiple_kernel_ridge_random_search(
     n_kernels = len(Ks)
     for train, val in cv.split(Y):
         if len(val) == 0 or len(train) == 0:
-            raise ValueError("Empty train or validation set. "
-                             "Check that `cv` is correctly defined.")
+            raise ValueError(
+                "Empty train or validation set. "
+                "Check that `cv` is correctly defined."
+            )
 
     if jitter_alphas:
         random_generator = check_random_state(random_state)
         given_alphas = backend.copy(alphas)
 
-    best_gammas = backend.full_like(gammas, fill_value=1.0 / n_kernels,
-                                    shape=(n_kernels, n_targets))
+    best_gammas = backend.full_like(
+        gammas, fill_value=1.0 / n_kernels, shape=(n_kernels, n_targets)
+    )
     best_alphas = backend.ones_like(gammas, shape=n_targets)
-    cv_scores = backend.zeros_like(gammas, shape=(len(gammas), n_targets),
-                                   device="cpu")
-    current_best_scores = backend.full_like(gammas, fill_value=-backend.inf,
-                                            shape=n_targets)
+    cv_scores = backend.zeros_like(gammas, shape=(len(gammas), n_targets), device="cpu")
+    current_best_scores = backend.full_like(
+        gammas, fill_value=-backend.inf, shape=n_targets
+    )
 
     # initialize refit ridge weights
-    if return_weights == 'primal':
+    if return_weights == "primal":
         if Xs is None:
             raise ValueError("Xs is needed to compute the primal weights.")
         n_features = sum(X.shape[1] for X in Xs)
-        refit_weights = backend.zeros_like(gammas,
-                                           shape=(n_features, n_targets),
-                                           device="cpu")
+        refit_weights = backend.zeros_like(
+            gammas, shape=(n_features, n_targets), device="cpu"
+        )
 
-    elif return_weights == 'dual':
-        refit_weights = backend.zeros_like(gammas,
-                                           shape=(n_samples, n_targets),
-                                           device="cpu")
+    elif return_weights == "dual":
+        refit_weights = backend.zeros_like(
+            gammas, shape=(n_samples, n_targets), device="cpu"
+        )
     elif return_weights is None:
         refit_weights = None
     else:
-        raise ValueError("Unknown parameter return_weights=%r." %
-                         (return_weights, ))
+        raise ValueError("Unknown parameter return_weights=%r." % (return_weights,))
 
     # Possibility to entirely skip the fit and return arbitrary weights.
     # This is to help designing integration smoke tests.
-    if os.environ.get('HIMALAYA_SKIP_FIT', default=False):
+    if os.environ.get("HIMALAYA_SKIP_FIT", default=False):
         warnings.warn("Skip fit because HIMALAYA_SKIP_FIT=True.")
         # skip the loop by emptying the gammas candidates
         gammas = gammas[:0]
@@ -201,8 +224,8 @@ def solve_multiple_kernel_ridge_random_search(
     ###########################################################################
     # Main loop over hyperparameter candidates (gammas)
     for ii, gamma in enumerate(
-            bar(gammas, '%d random sampling with cv' % len(gammas),
-                use_it=progress_bar)):
+        bar(gammas, "%d random sampling with cv" % len(gammas), use_it=progress_bar)
+    ):
 
         if Ks_in_cpu:
             K = (backend.to_cpu(gamma[:, None, None]) * Ks).sum(0)
@@ -214,8 +237,7 @@ def solve_multiple_kernel_ridge_random_search(
             noise = backend.asarray_like(random_generator.rand(), alphas)
             alphas = given_alphas * (10 ** (noise - 0.5))
 
-        scores = backend.zeros_like(gammas,
-                                    shape=(n_splits, len(alphas), n_targets))
+        scores = backend.zeros_like(gammas, shape=(n_splits, len(alphas), n_targets))
         for jj, (train, test) in enumerate(cv.split(K)):
             train = backend.to_gpu(train, device=device)
             test = backend.to_gpu(test, device=device)
@@ -226,9 +248,13 @@ def solve_multiple_kernel_ridge_random_search(
                 Ktest = centerer.transform(Ktest)
 
             for matrix, alpha_batch in _decompose_kernel_ridge(
-                    Ktrain=Ktrain, alphas=alphas, Ktest=Ktest,
-                    negative_eigenvalues="nan", n_alphas_batch=n_alphas_batch,
-                    method=diagonalize_method):
+                Ktrain=Ktrain,
+                alphas=alphas,
+                Ktest=Ktest,
+                negative_eigenvalues="nan",
+                n_alphas_batch=n_alphas_batch,
+                method=diagonalize_method,
+            ):
                 # n_alphas_batch, n_samples_test, n_samples_train = \
                 # matrix.shape
 
@@ -248,8 +274,7 @@ def solve_multiple_kernel_ridge_random_search(
 
                     with warnings.catch_warnings():
                         warnings.filterwarnings("ignore", category=UserWarning)
-                        scores[jj, alpha_batch, batch] = score_func(
-                            Ytest, predictions)
+                        scores[jj, alpha_batch, batch] = score_func(Ytest, predictions)
                         # n_alphas_batch, n_targets_batch = score.shape
 
                 # make small alphas impossible to select
@@ -261,7 +286,8 @@ def solve_multiple_kernel_ridge_random_search(
 
         # select best alphas
         alphas_argmax, cv_scores_ii = _select_best_alphas(
-            scores, alphas, local_alpha, conservative)
+            scores, alphas, local_alpha, conservative
+        )
         cv_scores[ii, :] = backend.to_cpu(cv_scores_ii)
 
         # update best_gammas and best_alphas
@@ -271,8 +297,7 @@ def solve_multiple_kernel_ridge_random_search(
         else:
             # update based on score across all targets
             update = cv_scores_ii.mean() > current_best_scores.mean() + epsilon
-            mask = backend.full_like(cv_scores_ii, fill_value=update,
-                                     dtype=bool)
+            mask = backend.full_like(cv_scores_ii, fill_value=update, dtype=bool)
         current_best_scores[mask] = cv_scores_ii[mask]
         best_gammas[:, mask] = gamma[:, None]
         best_alphas[mask] = alphas[alphas_argmax[mask]]
@@ -287,56 +312,62 @@ def solve_multiple_kernel_ridge_random_search(
                 # refit weights only for alphas used by at least one target
                 used_alphas = backend.unique(best_alphas[mask])
                 dual_weights = backend.zeros_like(
-                    K, shape=(n_samples, len(update_indices)), device="cpu")
+                    K, shape=(n_samples, len(update_indices)), device="cpu"
+                )
                 for matrix, alpha_batch in _decompose_kernel_ridge(
-                        K, used_alphas, Ktest=None,
-                        negative_eigenvalues="zeros",
-                        n_alphas_batch=min(len(used_alphas), n_alphas_batch),
-                        method=diagonalize_method):
+                    K,
+                    used_alphas,
+                    Ktest=None,
+                    negative_eigenvalues="zeros",
+                    n_alphas_batch=min(len(used_alphas), n_alphas_batch),
+                    method=diagonalize_method,
+                ):
 
-                    for start in range(0, len(update_indices),
-                                       n_targets_batch_refit):
+                    for start in range(0, len(update_indices), n_targets_batch_refit):
                         batch = slice(start, start + n_targets_batch_refit)
 
                         weights = backend.matmul(
                             matrix,
-                            backend.to_gpu(Y[:, update_indices[batch]],
-                                           device=device))
+                            backend.to_gpu(Y[:, update_indices[batch]], device=device),
+                        )
                         # used_n_alphas_batch, n_samples, n_targets_batch = \
                         # weights.shape
 
                         # select alphas corresponding to best cv_score
                         alphas_indices = backend.searchsorted(
-                            used_alphas, best_alphas[mask][batch])
+                            used_alphas, best_alphas[mask][batch]
+                        )
                         # mask targets whose selected alphas are outside the
                         # alpha batch
                         mask2 = backend.isin(
                             alphas_indices,
-                            backend.arange(len(used_alphas))[alpha_batch])
+                            backend.arange(len(used_alphas))[alpha_batch],
+                        )
                         # get indices in alpha_batch
                         alphas_indices = backend.searchsorted(
                             backend.arange(len(used_alphas))[alpha_batch],
-                            alphas_indices[mask2])
+                            alphas_indices[mask2],
+                        )
                         # update corresponding weights
                         mask_target = backend.arange(weights.shape[2])
                         mask_target = backend.to_gpu(mask_target)[mask2]
                         tmp = weights[alphas_indices, :, mask_target]
-                        dual_weights[:, batch][:, backend.to_cpu(mask2)] = \
+                        dual_weights[:, batch][:, backend.to_cpu(mask2)] = (
                             backend.to_cpu(tmp).T
+                        )
                         del weights, alphas_indices, mask2, mask_target
                     del matrix
 
-                if return_weights == 'primal':
+                if return_weights == "primal":
                     # multiply by g and not np.sqrt(g), as we then want to use
                     # the primal weights on the unscaled features Xs, and not
                     # on the scaled features (np.sqrt(g) * Xs)
-                    X = backend.concatenate([t * g for t, g in zip(Xs, gamma)],
-                                            1)
+                    X = backend.concatenate([t * g for t, g in zip(Xs, gamma)], 1)
                     primal_weights = backend.to_cpu(X.T) @ dual_weights
                     refit_weights[:, backend.to_cpu(mask)] = primal_weights
                     del X, primal_weights
 
-                elif return_weights == 'dual':
+                elif return_weights == "dual":
                     refit_weights[:, backend.to_cpu(mask)] = dual_weights
 
                 del dual_weights
@@ -346,14 +377,16 @@ def solve_multiple_kernel_ridge_random_search(
     ###########################################################################
 
     deltas = backend.log(best_gammas / best_alphas[None, :])
-    if return_weights == 'dual':
+    if return_weights == "dual":
         refit_weights *= backend.to_cpu(best_alphas)
 
     if fit_intercept:
-        if return_weights == 'dual':
+        if return_weights == "dual":
             intercept = backend.to_cpu(Y_offset)
-            intercept -= ((backend.to_cpu(Ks_rows) @ refit_weights) *
-                          backend.to_cpu(backend.exp(deltas))).sum(0)
+            intercept -= (
+                (backend.to_cpu(Ks_rows) @ refit_weights)
+                * backend.to_cpu(backend.exp(deltas))
+            ).sum(0)
         else:
             return NotImplementedError()
 
@@ -404,8 +437,9 @@ def _select_best_alphas(scores, alphas, local_alpha, conservative):
             # take a conservative alpha, the largest that beats the best
             # score minus one standard deviation
             scores_std = scores.std(0)
-            to_beat = backend.apply_argmax(scores_mean - scores_std,
-                                           alphas_argmax, axis)
+            to_beat = backend.apply_argmax(
+                scores_mean - scores_std, alphas_argmax, axis
+            )
             does_beat = backend.asarray(scores_mean > to_beat, dtype="float32")
             # add bias toward large alphas (scaled to be << 1)
             does_beat += backend.log(alphas)[:, None] * 1e-4
@@ -415,16 +449,17 @@ def _select_best_alphas(scores, alphas, local_alpha, conservative):
             raise NotImplementedError()
         else:
             alphas_argmax = backend.argmax(scores_mean.mean(1))
-            alphas_argmax = backend.full_like(alphas_argmax,
-                                              shape=scores_mean.shape[1],
-                                              fill_value=alphas_argmax)
+            alphas_argmax = backend.full_like(
+                alphas_argmax, shape=scores_mean.shape[1], fill_value=alphas_argmax
+            )
     best_scores_mean = backend.apply_argmax(scores_mean, alphas_argmax, axis)
 
     return alphas_argmax, best_scores_mean
 
 
-def generate_dirichlet_samples(n_samples, n_kernels, concentration=[.1, 1.],
-                               random_state=None):
+def generate_dirichlet_samples(
+    n_samples, n_kernels, concentration=[0.1, 1.0], random_state=None
+):
     """Generate samples from a Dirichlet distribution.
 
     Parameters
@@ -447,32 +482,31 @@ def generate_dirichlet_samples(n_samples, n_kernels, concentration=[.1, 1.],
         Dirichlet samples.
     """
     import numpy as np
+
     random_generator = check_random_state(random_state)
 
     concentration = np.atleast_1d(concentration)
     n_concentrations = len(concentration)
-    n_samples_per_concentration = int(
-        np.ceil(n_samples / float(n_concentrations)))
+    n_samples_per_concentration = int(np.ceil(n_samples / float(n_concentrations)))
 
     # generate the gammas
     gammas = []
     for conc in concentration:
         if conc == np.inf:
-            gamma = np.full(n_kernels, fill_value=1. / n_kernels)[None]
+            gamma = np.full(n_kernels, fill_value=1.0 / n_kernels)[None]
             gamma = np.tile(gamma, (n_samples_per_concentration, 1))
         else:
-            gamma = random_generator.dirichlet([conc] * n_kernels,
-                                               n_samples_per_concentration)
+            gamma = random_generator.dirichlet(
+                [conc] * n_kernels, n_samples_per_concentration
+            )
         gammas.append(gamma)
     gammas = np.vstack(gammas)
 
     # reorder the gammas to alternate between concentrations:
     # [a0, a1, a2, a0, a1, a2] instead of [a0, a0, a1, a1, a2, a2]
-    gammas = gammas.reshape(n_concentrations, n_samples_per_concentration,
-                            n_kernels)
+    gammas = gammas.reshape(n_concentrations, n_samples_per_concentration, n_kernels)
     gammas = np.swapaxes(gammas, 0, 1)
-    gammas = gammas.reshape(n_concentrations * n_samples_per_concentration,
-                            n_kernels)
+    gammas = gammas.reshape(n_concentrations * n_samples_per_concentration, n_kernels)
 
     # remove extra gammas
     gammas = gammas[:n_samples]
@@ -484,8 +518,14 @@ def generate_dirichlet_samples(n_samples, n_kernels, concentration=[.1, 1.],
     return gammas
 
 
-def _decompose_kernel_ridge(Ktrain, alphas, Ktest=None, n_alphas_batch=None,
-                            method="eigh", negative_eigenvalues="zeros"):
+def _decompose_kernel_ridge(
+    Ktrain,
+    alphas,
+    Ktest=None,
+    n_alphas_batch=None,
+    method="eigh",
+    negative_eigenvalues="zeros",
+):
     """Precompute resolution matrices for kernel ridge predictions.
 
     To compute the prediction::
@@ -546,7 +586,7 @@ def _decompose_kernel_ridge(Ktrain, alphas, Ktest=None, n_alphas_batch=None,
         # SVD: K = U @ np.diag(eigenvalues) @ Vt
         U, eigenvalues, Vt = backend.svd(Ktrain)
     else:
-        raise ValueError("Unknown method=%r." % (method, ))
+        raise ValueError("Unknown method=%r." % (method,))
 
     if Ktest is not None:
         Ktest_V = backend.matmul(Ktest, Vt.T)
@@ -560,9 +600,9 @@ def _decompose_kernel_ridge(Ktrain, alphas, Ktest=None, n_alphas_batch=None,
         # or from float32
         if eigenvalues[0] < 0:
             if negative_eigenvalues == "nan":
-                ev_weighting[alphas[batch] < -eigenvalues[0] *
-                             2, :] = backend.asarray(backend.nan,
-                                                     dtype=ev_weighting.dtype)
+                ev_weighting[alphas[batch] < -eigenvalues[0] * 2, :] = backend.asarray(
+                    backend.nan, dtype=ev_weighting.dtype
+                )
 
             elif negative_eigenvalues == "zeros":
                 eigenvalues[eigenvalues < 0] = 0
@@ -571,10 +611,12 @@ def _decompose_kernel_ridge(Ktrain, alphas, Ktest=None, n_alphas_batch=None,
                 raise RuntimeError(
                     "Negative eigenvalues. Make sure the kernel is positive "
                     "semi-definite, increase the regularization alpha, or use"
-                    "another solver.")
+                    "another solver."
+                )
             else:
-                raise ValueError("Unknown negative_eigenvalues=%r." %
-                                 (negative_eigenvalues, ))
+                raise ValueError(
+                    "Unknown negative_eigenvalues=%r." % (negative_eigenvalues,)
+                )
 
         if Ktest is not None:
             matrices = backend.matmul(Ktest_V, ev_weighting[:, :, None] * U.T)
@@ -590,10 +632,20 @@ def _decompose_kernel_ridge(Ktrain, alphas, Ktest=None, n_alphas_batch=None,
 
 
 def solve_kernel_ridge_cv_eigenvalues(
-        K, Y, alphas=1.0, score_func=l2_neg_loss, cv=5, fit_intercept=False,
-        local_alpha=True, n_targets_batch=None, n_targets_batch_refit=None,
-        n_alphas_batch=None, conservative=False, Y_in_cpu=False,
-        diagonalize_method="eigh"):
+    K,
+    Y,
+    alphas=1.0,
+    score_func=l2_neg_loss,
+    cv=5,
+    fit_intercept=False,
+    local_alpha=True,
+    n_targets_batch=None,
+    n_targets_batch_refit=None,
+    n_alphas_batch=None,
+    conservative=False,
+    Y_in_cpu=False,
+    diagonalize_method="eigh",
+):
     """Solve kernel ridge regression with a grid search over alphas.
 
     Parameters
@@ -644,21 +696,33 @@ def solve_kernel_ridge_cv_eigenvalues(
     backend = get_backend()
 
     n_iter = backend.ones_like(K, shape=(1, 1))
-    fixed_params = dict(return_weights="dual", Xs=None, progress_bar=False,
-                        concentration=None, jitter_alphas=False,
-                        random_state=None, n_iter=n_iter)
+    fixed_params = dict(
+        return_weights="dual",
+        Xs=None,
+        progress_bar=False,
+        concentration=None,
+        jitter_alphas=False,
+        random_state=None,
+        n_iter=n_iter,
+    )
 
-    copied_params = dict(alphas=alphas, score_func=score_func, cv=cv,
-                         local_alpha=local_alpha, fit_intercept=fit_intercept,
-                         n_targets_batch=n_targets_batch,
-                         n_targets_batch_refit=n_targets_batch_refit,
-                         n_alphas_batch=n_alphas_batch,
-                         conservative=conservative, Y_in_cpu=Y_in_cpu,
-                         diagonalize_method=diagonalize_method)
+    copied_params = dict(
+        alphas=alphas,
+        score_func=score_func,
+        cv=cv,
+        local_alpha=local_alpha,
+        fit_intercept=fit_intercept,
+        n_targets_batch=n_targets_batch,
+        n_targets_batch_refit=n_targets_batch_refit,
+        n_alphas_batch=n_alphas_batch,
+        conservative=conservative,
+        Y_in_cpu=Y_in_cpu,
+        diagonalize_method=diagonalize_method,
+    )
 
-    tmp = solve_multiple_kernel_ridge_random_search(K[None], Y,
-                                                    **copied_params,
-                                                    **fixed_params)
+    tmp = solve_multiple_kernel_ridge_random_search(
+        K[None], Y, **copied_params, **fixed_params
+    )
     if fit_intercept:
         deltas, dual_weights, cv_scores, intercept = tmp
         best_alphas = backend.exp(-deltas[0])
@@ -671,9 +735,11 @@ def solve_kernel_ridge_cv_eigenvalues(
         return best_alphas, dual_weights, cv_scores
 
 
-solve_kernel_ridge_cv_svd = partial(solve_kernel_ridge_cv_eigenvalues,
-                                    diagonalize_method="svd")
+solve_kernel_ridge_cv_svd = partial(
+    solve_kernel_ridge_cv_eigenvalues, diagonalize_method="svd"
+)
 solve_kernel_ridge_cv_svd.__doc__ = solve_kernel_ridge_cv_eigenvalues.__doc__
 
-KERNEL_RIDGE_CV_SOLVERS = dict(eigenvalues=solve_kernel_ridge_cv_eigenvalues,
-                               svd=solve_kernel_ridge_cv_svd)
+KERNEL_RIDGE_CV_SOLVERS = dict(
+    eigenvalues=solve_kernel_ridge_cv_eigenvalues, svd=solve_kernel_ridge_cv_svd
+)

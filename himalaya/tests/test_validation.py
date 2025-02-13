@@ -8,7 +8,7 @@ from himalaya.validation import _assert_all_finite
 from himalaya.validation import check_cv
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_suppress_validation(backend):
     backend = set_backend(backend)
     X = backend.asarray([0, np.inf])

@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 # get version from himalaya/__init__.py
 __version__ = 0.0
-with open('himalaya/__init__.py') as f:
+with open("himalaya/__init__.py") as f:
     infos = f.readlines()
 for line in infos:
     if "__version__" in line:
@@ -32,22 +32,26 @@ extras_require = {
 }
 
 extras_require["all"] = sum(list(extras_require.values()), [])
-extras_require["doc"] = ["numpydoc", "sphinx", "sphinx_gallery",
-                         "sphinxcontrib-mermaid"]
+extras_require["doc"] = [
+    "numpydoc",
+    "sphinx",
+    "sphinx_gallery",
+    "sphinxcontrib-mermaid",
+]
 extras_require["doc"] += extras_require["viz"] + extras_require["all_backends"]
 
 if __name__ == "__main__":
     setup(
-        name='himalaya',
+        name="himalaya",
         maintainer="Tom Dupre la Tour",
         maintainer_email="tomdlt@berkeley.edu",
         description="Multiple-target machine learning",
-        license='BSD (3-clause)',
+        license="BSD (3-clause)",
         version=__version__,
         packages=find_packages(),
         url="https://github.com/gallantlab/himalaya",
         install_requires=requirements,
         extras_require=extras_require,
         long_description=long_description,
-        long_description_content_type='text/x-rst',
+        long_description_content_type="text/x-rst",
     )

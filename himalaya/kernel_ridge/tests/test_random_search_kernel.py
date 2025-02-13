@@ -31,56 +31,68 @@ def _create_dataset(backend, n_targets=4):
     Ys = backend.stack([X @ w for X, w in zip(Xs, ws)])
     Y = Ys.sum(0)
 
-    gammas = backend.asarray(backend.rand(n_gammas, Ks.shape[0]),
-                             backend.float64)
+    gammas = backend.asarray(backend.rand(n_gammas, Ks.shape[0]), backend.float64)
     gammas /= gammas.sum(1)[:, None]
 
     return Ks, Y, gammas, Xs
 
 
-@pytest.mark.parametrize('local_alpha', [True, False])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
-def test_solve_multiple_kernel_ridge_random_search_local_alpha(
-        backend, local_alpha):
-    _test_solve_multiple_kernel_ridge_random_search(backend=backend,
-                                                    local_alpha=local_alpha)
+@pytest.mark.parametrize("local_alpha", [True, False])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
+def test_solve_multiple_kernel_ridge_random_search_local_alpha(backend, local_alpha):
+    _test_solve_multiple_kernel_ridge_random_search(
+        backend=backend, local_alpha=local_alpha
+    )
 
 
-@pytest.mark.parametrize('n_targets_batch', [None, 3])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("n_targets_batch", [None, 3])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_solve_multiple_kernel_ridge_random_search_n_targets_batch(
-        backend, n_targets_batch):
+    backend, n_targets_batch
+):
     _test_solve_multiple_kernel_ridge_random_search(
-        backend=backend, n_targets_batch=n_targets_batch)
+        backend=backend, n_targets_batch=n_targets_batch
+    )
 
 
-@pytest.mark.parametrize('n_alphas_batch', [None, 2])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("n_alphas_batch", [None, 2])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_solve_multiple_kernel_ridge_random_search_n_alphas_batch(
-        backend, n_alphas_batch):
+    backend, n_alphas_batch
+):
     _test_solve_multiple_kernel_ridge_random_search(
-        backend=backend, n_alphas_batch=n_alphas_batch)
+        backend=backend, n_alphas_batch=n_alphas_batch
+    )
 
 
-@pytest.mark.parametrize('return_weights', ['primal', 'dual'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("return_weights", ["primal", "dual"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_solve_multiple_kernel_ridge_random_search_return_weights(
-        backend, return_weights):
+    backend, return_weights
+):
     _test_solve_multiple_kernel_ridge_random_search(
-        backend=backend, return_weights=return_weights)
+        backend=backend, return_weights=return_weights
+    )
 
 
-@pytest.mark.parametrize('diagonalize_method', ['eigh', 'svd'])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("diagonalize_method", ["eigh", "svd"])
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_solve_multiple_kernel_ridge_random_search_diagonalize_method(
-        backend, diagonalize_method):
+    backend, diagonalize_method
+):
     _test_solve_multiple_kernel_ridge_random_search(
-        backend=backend, diagonalize_method=diagonalize_method)
+        backend=backend, diagonalize_method=diagonalize_method
+    )
 
 
 def _test_solve_multiple_kernel_ridge_random_search(
-        backend, n_targets_batch=None, n_alphas_batch=None,
-        return_weights="dual", diagonalize_method="eigh", local_alpha=True):
+    backend,
+    n_targets_batch=None,
+    n_alphas_batch=None,
+    return_weights="dual",
+    diagonalize_method="eigh",
+    local_alpha=True,
+):
     backend = set_backend(backend)
 
     Ks, Y, gammas, Xs = _create_dataset(backend)
@@ -91,10 +103,20 @@ def _test_solve_multiple_kernel_ridge_random_search(
     ############
     # run solver
     results = solve_multiple_kernel_ridge_random_search(
-        Ks, Y, n_iter=gammas, alphas=alphas, score_func=r2_score, cv=cv,
-        n_targets_batch=n_targets_batch, Xs=Xs, progress_bar=False,
-        return_weights=return_weights, n_alphas_batch=n_alphas_batch,
-        diagonalize_method=diagonalize_method, local_alpha=local_alpha)
+        Ks,
+        Y,
+        n_iter=gammas,
+        alphas=alphas,
+        score_func=r2_score,
+        cv=cv,
+        n_targets_batch=n_targets_batch,
+        Xs=Xs,
+        progress_bar=False,
+        return_weights=return_weights,
+        n_alphas_batch=n_alphas_batch,
+        diagonalize_method=diagonalize_method,
+        local_alpha=local_alpha,
+    )
     best_deltas, refit_weights, cv_scores = results
 
     #########################################
@@ -106,16 +128,20 @@ def _test_solve_multiple_kernel_ridge_random_search(
             for train, test in cv.split(X):
                 for alpha in alphas:
                     model = sklearn.linear_model.Ridge(
-                        alpha=backend.to_numpy(alpha), fit_intercept=False)
-                    model = model.fit(backend.to_numpy(X[train]),
-                                      backend.to_numpy(Y[train]))
+                        alpha=backend.to_numpy(alpha), fit_intercept=False
+                    )
+                    model = model.fit(
+                        backend.to_numpy(X[train]), backend.to_numpy(Y[train])
+                    )
                     predictions = backend.asarray_like(
-                        model.predict(backend.to_numpy(X[test])), Y)
+                        model.predict(backend.to_numpy(X[test])), Y
+                    )
                     test_scores.append(r2_score(Y[test], predictions))
 
         test_scores = backend.stack(test_scores)
-        test_scores = test_scores.reshape(len(gammas), cv.get_n_splits(),
-                                          len(alphas), n_targets)
+        test_scores = test_scores.reshape(
+            len(gammas), cv.get_n_splits(), len(alphas), n_targets
+        )
         test_scores_mean = backend.max(test_scores.mean(1), 1)
         assert_array_almost_equal(cv_scores, test_scores_mean, decimal=5)
 
@@ -125,35 +151,35 @@ def _test_solve_multiple_kernel_ridge_random_search(
         gamma = backend.exp(best_deltas[:, tt])
         alpha = 1.0
 
-        if return_weights == 'primal':
+        if return_weights == "primal":
             # compare primal weights with sklearn.linear_model.Ridge
-            X = backend.concatenate(
-                [X * backend.sqrt(g) for X, g in zip(Xs, gamma)], 1)
-            model = sklearn.linear_model.Ridge(fit_intercept=False,
-                                               alpha=backend.to_numpy(alpha))
-            w1 = model.fit(backend.to_numpy(X),
-                           backend.to_numpy(Y[:, tt])).coef_
+            X = backend.concatenate([X * backend.sqrt(g) for X, g in zip(Xs, gamma)], 1)
+            model = sklearn.linear_model.Ridge(
+                fit_intercept=False, alpha=backend.to_numpy(alpha)
+            )
+            w1 = model.fit(backend.to_numpy(X), backend.to_numpy(Y[:, tt])).coef_
             w1 = np.split(w1, np.cumsum([X.shape[1] for X in Xs][:-1]), axis=0)
             w1 = [backend.asarray(w) for w in w1]
             w1_scaled = backend.concatenate(
-                [w * backend.sqrt(g) for w, g, in zip(w1, gamma)])
-            assert_array_almost_equal(w1_scaled, refit_weights[:, tt],
-                                      decimal=5)
+                [w * backend.sqrt(g) for w, g, in zip(w1, gamma)]
+            )
+            assert_array_almost_equal(w1_scaled, refit_weights[:, tt], decimal=5)
 
-        elif return_weights == 'dual':
+        elif return_weights == "dual":
             # compare dual weights with scipy.linalg.solve
             Ks_64 = backend.asarray(Ks, dtype=backend.float64)
             gamma_64 = backend.asarray(gamma, dtype=backend.float64)
             K = backend.matmul(Ks_64.T, gamma_64).T
             reg = backend.asarray_like(np.eye(K.shape[0]), K) * alpha
             Y_64 = backend.asarray(Y, dtype=backend.float64)
-            c1 = scipy.linalg.solve(backend.to_numpy(K + reg),
-                                    backend.to_numpy(Y_64[:, tt]))
+            c1 = scipy.linalg.solve(
+                backend.to_numpy(K + reg), backend.to_numpy(Y_64[:, tt])
+            )
             c1 = backend.asarray_like(c1, K)
             assert_array_almost_equal(c1, refit_weights[:, tt], decimal=5)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_solve_multiple_kernel_ridge_random_search_single_alpha_numpy(backend):
     backend = set_backend(backend)
     # just a smoke test, so make it minimal
@@ -161,15 +187,12 @@ def test_solve_multiple_kernel_ridge_random_search_single_alpha_numpy(backend):
     alphas = 1.0
     # make Y a numpy array
     Y = backend.to_numpy(Y)
-    _ = solve_multiple_kernel_ridge_random_search(
-        Ks, Y, n_iter=gammas, alphas=alphas
-    )
+    _ = solve_multiple_kernel_ridge_random_search(Ks, Y, n_iter=gammas, alphas=alphas)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
-@pytest.mark.parametrize('n_kernels', [1, 2])
-def test_solve_multiple_kernel_ridge_random_search_global_alpha(
-        backend, n_kernels):
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
+@pytest.mark.parametrize("n_kernels", [1, 2])
+def test_solve_multiple_kernel_ridge_random_search_global_alpha(backend, n_kernels):
     backend = set_backend(backend)
     # add more targets to make sure we get some variability
     Ks, Y, gammas, Xs = _create_dataset(backend, n_targets=20)
@@ -184,7 +207,7 @@ def test_solve_multiple_kernel_ridge_random_search_global_alpha(
         alphas=alphas,
         cv=cv,
         local_alpha=False,
-        return_alphas=True
+        return_alphas=True,
     )
     # test that we return a single combination of deltas
     deltas = backend.to_numpy(deltas)

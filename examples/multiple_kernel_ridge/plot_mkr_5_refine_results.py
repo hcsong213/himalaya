@@ -5,6 +5,7 @@ This example demonstrates how to solve multiple-kernel ridge regression with
 hyperparameter random search, then refine the results with hyperparameter
 gradient descent.
 """
+
 import numpy as np
 
 from himalaya.backend import set_backend
@@ -15,7 +16,8 @@ from himalaya.utils import generate_multikernel_dataset
 
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-set_config(display='diagram')
+
+set_config(display="diagram")
 
 ###############################################################################
 # In this example, we use the ``cupy`` backend (GPU).
@@ -30,11 +32,15 @@ backend = set_backend("cupy", on_error="warn")
 # - Y_train : array of shape (n_samples_train, n_targets)
 # - Y_test : array of shape (n_samples_test, n_targets)
 
-(X_train, X_test, Y_train, Y_test, kernel_weights,
- n_features_list) = generate_multikernel_dataset(n_kernels=4, n_targets=50,
-                                                 n_samples_train=600,
-                                                 n_samples_test=300,
-                                                 random_state=42)
+(X_train, X_test, Y_train, Y_test, kernel_weights, n_features_list) = (
+    generate_multikernel_dataset(
+        n_kernels=4,
+        n_targets=50,
+        n_samples_train=600,
+        n_samples_test=300,
+        random_state=42,
+    )
+)
 
 feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 
@@ -45,13 +51,13 @@ feature_names = [f"Feature space {ii}" for ii in range(len(n_features_list))]
 # Find the start and end of each feature space X in Xs
 start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
 slices = [
-    slice(start, end)
-    for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
 ]
 
 # Create a different ``Kernelizer`` for each feature space.
-kernelizers = [("space %d" % ii, Kernelizer(), slice_)
-               for ii, slice_ in enumerate(slices)]
+kernelizers = [
+    ("space %d" % ii, Kernelizer(), slice_) for ii, slice_ in enumerate(slices)
+]
 column_kernelizer = ColumnKernelizer(kernelizers)
 
 ###############################################################################
@@ -62,8 +68,12 @@ column_kernelizer = ColumnKernelizer(kernelizers)
 
 solver_params = dict(n_iter=5, alphas=np.logspace(-10, 10, 41))
 
-model_1 = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search",
-                                solver_params=solver_params, random_state=42)
+model_1 = MultipleKernelRidgeCV(
+    kernels="precomputed",
+    solver="random_search",
+    solver_params=solver_params,
+    random_state=42,
+)
 pipe_1 = make_pipeline(column_kernelizer, model_1)
 
 # Fit the model on all targets
@@ -73,12 +83,16 @@ pipe_1.fit(X_train, Y_train)
 # Define the gradient-descent model
 # ---------------------------------
 
-solver_params = dict(max_iter=10, hyper_gradient_method="direct",
-                     max_iter_inner_hyper=10,
-                     initial_deltas="here_will_go_the_previous_deltas")
+solver_params = dict(
+    max_iter=10,
+    hyper_gradient_method="direct",
+    max_iter_inner_hyper=10,
+    initial_deltas="here_will_go_the_previous_deltas",
+)
 
-model_2 = MultipleKernelRidgeCV(kernels="precomputed", solver="hyper_gradient",
-                                solver_params=solver_params)
+model_2 = MultipleKernelRidgeCV(
+    kernels="precomputed", solver="hyper_gradient", solver_params=solver_params
+)
 pipe_2 = make_pipeline(column_kernelizer, model_2)
 
 ###############################################################################
@@ -91,7 +105,7 @@ top = 60  # top 60%
 best_cv_scores = backend.to_numpy(pipe_1[-1].cv_scores_.max(0))
 mask = best_cv_scores > np.percentile(best_cv_scores, 100 - top)
 
-pipe_2[-1].solver_params['initial_deltas'] = pipe_1[-1].deltas_[:, mask]
+pipe_2[-1].solver_params["initial_deltas"] = pipe_1[-1].deltas_[:, mask]
 pipe_2.fit(X_train, Y_train[:, mask])
 
 ###############################################################################
@@ -111,7 +125,7 @@ test_scores_2 = backend.to_numpy(test_scores_2)
 plt.figure(figsize=(4, 4))
 plt.scatter(test_scores_1, test_scores_2, alpha=0.3)
 plt.xlim(0, 1)
-plt.plot(plt.xlim(), plt.xlim(), color='k', lw=1)
+plt.plot(plt.xlim(), plt.xlim(), color="k", lw=1)
 plt.xlabel(r"Base model")
 plt.ylabel(r"Refined model")
 plt.title("$R^2$ generalization score")

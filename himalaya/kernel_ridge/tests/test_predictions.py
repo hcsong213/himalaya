@@ -17,31 +17,29 @@ def _create_dataset(backend):
     ]
     Ks = backend.stack([backend.matmul(X, X.T) for X in Xs])
     Y = backend.asarray(backend.randn(n_samples, n_targets), backend.float64)
-    dual_weights = backend.asarray(backend.randn(n_samples, n_targets),
-                                   backend.float64)
-    exp_deltas = backend.asarray(backend.rand(Ks.shape[0], n_targets),
-                                 backend.float64)
+    dual_weights = backend.asarray(backend.randn(n_samples, n_targets), backend.float64)
+    exp_deltas = backend.asarray(backend.rand(Ks.shape[0], n_targets), backend.float64)
     deltas = backend.log(exp_deltas)
 
     return Xs, Ks, Y, deltas, dual_weights
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_predict_weighted_kernel_ridge(backend):
     backend = set_backend(backend)
     Xs, Ks, _, deltas, dual_weights = _create_dataset(backend)
 
-    primal_weights = primal_weights_weighted_kernel_ridge(
-        dual_weights, deltas, Xs)
+    primal_weights = primal_weights_weighted_kernel_ridge(dual_weights, deltas, Xs)
     predictions_primal = backend.stack(
-        [X @ backend.asarray(w) for X, w in zip(Xs, primal_weights)]).sum(0)
+        [X @ backend.asarray(w) for X, w in zip(Xs, primal_weights)]
+    ).sum(0)
 
     predictions_dual = predict_weighted_kernel_ridge(Ks, dual_weights, deltas)
 
     assert_array_almost_equal(predictions_primal, predictions_dual)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_predict_weighted_kernel_ridge_n_targets_batch(backend):
     backend = set_backend(backend)
     Xs, Ks, _, deltas, dual_weights = _create_dataset(backend)
@@ -49,6 +47,7 @@ def test_predict_weighted_kernel_ridge_n_targets_batch(backend):
     predictions_dual = predict_weighted_kernel_ridge(Ks, dual_weights, deltas)
 
     predictions_dual_n_targets_batch = predict_weighted_kernel_ridge(
-            Ks, dual_weights, deltas, n_targets_batch=10)
+        Ks, dual_weights, deltas, n_targets_batch=10
+    )
 
     assert_array_almost_equal(predictions_dual, predictions_dual_n_targets_batch)

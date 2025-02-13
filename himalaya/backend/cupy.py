@@ -2,12 +2,15 @@
 
 To use this backend, call ``himalaya.backend.set_backend("cupy")``.
 """
+
 try:
     import cupy
 except ImportError as error:
     import sys
+
     if "pytest" in sys.modules:  # if run through pytest
         import pytest
+
         pytest.skip("Cupy not installed.")
     raise ImportError("Cupy not installed.") from error
 
@@ -39,16 +42,18 @@ def std_float64(array, axis=None, demean=True, keepdims=False):
     """Compute the standard deviation of X with double precision,
     and cast back the result to original dtype.
     """
-    return array.std(axis, dtype=cupy.float64,
-                     keepdims=keepdims).astype(array.dtype, copy=False)
+    return array.std(axis, dtype=cupy.float64, keepdims=keepdims).astype(
+        array.dtype, copy=False
+    )
 
 
 def mean_float64(array, axis=None, keepdims=False):
     """Compute the mean of X with double precision,
     and cast back the result to original dtype.
     """
-    return array.mean(axis, dtype=cupy.float64,
-                      keepdims=keepdims).astype(array.dtype, copy=False)
+    return array.mean(axis, dtype=cupy.float64, keepdims=keepdims).astype(
+        array.dtype, copy=False
+    )
 
 
 ###############################################################################
@@ -110,12 +115,14 @@ def to_numpy(array):
 
 def isin(x, y):
     import numpy as np  # XXX
+
     np_result = np.isin(to_numpy(x), to_numpy(y))
     return asarray(np_result, dtype=bool)
 
 
 def searchsorted(x, y):
     import numpy as np  # XXX
+
     np_result = np.searchsorted(to_numpy(x), to_numpy(y))
     return asarray(np_result, dtype=cupy.int64)
 
@@ -171,6 +178,7 @@ def is_in_gpu(array):
 def asarray(a, dtype=None, order=None, device=None):
     if device == "cpu":
         import numpy as np
+
         return np.asarray(cupy.asnumpy(a), dtype, order)
     else:
         return cupy.asarray(a, dtype, order)
@@ -204,9 +212,7 @@ def svd(X, full_matrices=True):
     if X.ndim == 2:
         return cupy.linalg.svd(X, full_matrices=full_matrices)
     elif X.ndim == 3:
-        UsV_list = [
-            cupy.linalg.svd(Xi, full_matrices=full_matrices) for Xi in X
-        ]
+        UsV_list = [cupy.linalg.svd(Xi, full_matrices=full_matrices) for Xi in X]
         return map(cupy.stack, zip(*UsV_list))
     else:
         raise NotImplementedError()

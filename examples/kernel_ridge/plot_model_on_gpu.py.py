@@ -20,6 +20,7 @@ instructions.
 # Create a random dataset
 # -----------------------
 import numpy as np
+
 n_samples, n_features, n_targets = 10, 20, 4
 X = np.random.randn(n_samples, n_features)
 Y = np.random.randn(n_samples, n_targets)
@@ -33,6 +34,7 @@ Y = np.random.randn(n_samples, n_targets)
 # the backend is kept unchanged.
 
 from himalaya.backend import set_backend
+
 backend = set_backend("cupy", on_error="warn")
 
 ###############################################################################
@@ -47,6 +49,7 @@ backend = set_backend("cupy", on_error="warn")
 X = X.astype("float32")
 
 from himalaya.kernel_ridge import KernelRidge
+
 model_him = KernelRidge(kernel="linear", alpha=0.1)
 model_him.fit(X, Y)
 

@@ -2,7 +2,7 @@ import sys
 import time
 
 
-def bar(iterable, title='', use_it=True):
+def bar(iterable, title="", use_it=True):
     """Simple API for progress_bar.
 
     Parameters
@@ -28,7 +28,7 @@ def bar(iterable, title='', use_it=True):
         return iterable
 
 
-class ProgressBar():
+class ProgressBar:
     """Generate a command-line progress bar.
 
     Parameters
@@ -59,11 +59,19 @@ class ProgressBar():
     >>>     time.sleep(0.5)
     """
 
-    spinner_symbols = ['|', '/', '-', '\\']
-    template = '\r[{0}{1}] {2:0.0f}% {3} {4:.02f} sec | {5} | '
+    spinner_symbols = ["|", "/", "-", "\\"]
+    template = "\r[{0}{1}] {2:0.0f}% {3} {4:.02f} sec | {5} | "
 
-    def __init__(self, title='', max_value=None, initial_value=0, max_chars=40,
-                 progress_character='.', spinner=False, verbose_bool=True):
+    def __init__(
+        self,
+        title="",
+        max_value=None,
+        initial_value=0,
+        max_chars=40,
+        progress_character=".",
+        spinner=False,
+        verbose_bool=True,
+    ):
         self.cur_value = initial_value
         self.max_value = max_value
         self.title = title
@@ -96,7 +104,7 @@ class ProgressBar():
         # for the progressbar.
         self.cur_value = cur_value
         max_value = self.max_value or 1
-        progress = min(float(self.cur_value) / max_value, 1.)
+        progress = min(float(self.cur_value) / max_value, 1.0)
         num_chars = int(progress * self.max_chars)
         num_left = self.max_chars - num_chars
 
@@ -110,10 +118,14 @@ class ProgressBar():
         # The \r tells the cursor to return to the beginning of the line rather
         # than starting a new line.  This allows us to have a progressbar-style
         # display in the console window.
-        bar = self.template.format(self.progress_character * num_chars,
-                                   ' ' * num_left, progress * 100,
-                                   self.spinner_symbols[self.spinner_index],
-                                   duration, self.title)
+        bar = self.template.format(
+            self.progress_character * num_chars,
+            " " * num_left,
+            progress * 100,
+            self.spinner_symbols[self.spinner_index],
+            duration,
+            self.title,
+        )
         # Force a flush because sometimes when using bash scripts and pipes,
         # the output is not printed until after the program exits.
         if self._do_print:
@@ -147,7 +159,7 @@ class ProgressBar():
     def close(self):
         """Close the progress bar."""
         if not self.closed:
-            sys.stdout.write('\n')
+            sys.stdout.write("\n")
             sys.stdout.flush()
             self.closed = True
 

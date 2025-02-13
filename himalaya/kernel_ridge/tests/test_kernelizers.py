@@ -19,8 +19,8 @@ from himalaya.kernel_ridge import MultipleKernelRidgeCV
 from himalaya.kernel_ridge import KernelCenterer
 
 
-@pytest.mark.parametrize('kernel', Kernelizer.ALL_KERNELS)
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("kernel", Kernelizer.ALL_KERNELS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernelizer(backend, kernel):
     backend = set_backend(backend)
 
@@ -34,7 +34,7 @@ def test_kernelizer(backend, kernel):
     assert_array_almost_equal(function(X2, X1), ker.transform(X2))
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernelizer_callable(backend):
     backend = set_backend(backend)
 
@@ -51,7 +51,7 @@ def test_kernelizer_callable(backend):
     assert_array_almost_equal(function(X2, X1), ker.transform(X2), decimal=5)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernelizer_wrong_input(backend):
     backend = set_backend(backend)
     X1 = backend.randn(10, 5)
@@ -64,8 +64,8 @@ def test_kernelizer_wrong_input(backend):
         Kernelizer().fit(X1).transform(X2)
 
 
-@pytest.mark.parametrize('kernel', Kernelizer.ALL_KERNELS)
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("kernel", Kernelizer.ALL_KERNELS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_all_columns(backend, kernel):
     backend = set_backend(backend)
 
@@ -73,9 +73,11 @@ def test_column_kernelizer_all_columns(backend, kernel):
     X2 = backend.randn(8, 5)
 
     function = Kernelizer.ALL_KERNELS[kernel]
-    ker = ColumnKernelizer([
-        ("name", Kernelizer(kernel=kernel), slice(0, 5)),
-    ])
+    ker = ColumnKernelizer(
+        [
+            ("name", Kernelizer(kernel=kernel), slice(0, 5)),
+        ]
+    )
 
     assert ker.fit_transform(X1).shape == (1, 10, 10)
     assert ker.transform(X2).shape == (1, 8, 10)
@@ -84,7 +86,7 @@ def test_column_kernelizer_all_columns(backend, kernel):
     assert_array_almost_equal(function(X2, X1), ker.transform(X2)[0])
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_passthrough(backend):
     backend = set_backend(backend)
 
@@ -92,9 +94,11 @@ def test_column_kernelizer_passthrough(backend):
     X2 = backend.randn(8, 5)
 
     function = Kernelizer.ALL_KERNELS["linear"]
-    ker = ColumnKernelizer([
-        ("name", "passthrough", slice(0, 5)),
-    ])
+    ker = ColumnKernelizer(
+        [
+            ("name", "passthrough", slice(0, 5)),
+        ]
+    )
 
     assert ker.fit_transform(X1).shape == (1, 10, 10)
     assert ker.transform(X2).shape == (1, 8, 10)
@@ -103,7 +107,7 @@ def test_column_kernelizer_passthrough(backend):
     assert_array_almost_equal(function(X2, X1), ker.transform(X2)[0])
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_remainder(backend):
     backend = set_backend(backend)
 
@@ -111,9 +115,12 @@ def test_column_kernelizer_remainder(backend):
     X2 = backend.randn(8, 5)
 
     function = Kernelizer.ALL_KERNELS["linear"]
-    ker = ColumnKernelizer([
-        ("name", Kernelizer(kernel="wrong"), []),
-    ], remainder="passthrough")
+    ker = ColumnKernelizer(
+        [
+            ("name", Kernelizer(kernel="wrong"), []),
+        ],
+        remainder="passthrough",
+    )
 
     assert ker.fit_transform(X1).shape == (1, 10, 10)
     assert ker.transform(X2).shape == (1, 8, 10)
@@ -122,7 +129,7 @@ def test_column_kernelizer_remainder(backend):
     assert_array_almost_equal(function(X2, X1), ker.transform(X2)[0])
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_multiple(backend):
     backend = set_backend(backend)
 
@@ -131,10 +138,13 @@ def test_column_kernelizer_multiple(backend):
 
     linear = Kernelizer.ALL_KERNELS["linear"]
     poly = Kernelizer.ALL_KERNELS["poly"]
-    ker = ColumnKernelizer([
-        ("name0", Kernelizer(kernel="linear"), [0, 1]),
-        ("name1", Kernelizer(kernel="poly"), [2, 3]),
-    ], remainder="passthrough")
+    ker = ColumnKernelizer(
+        [
+            ("name0", Kernelizer(kernel="linear"), [0, 1]),
+            ("name1", Kernelizer(kernel="poly"), [2, 3]),
+        ],
+        remainder="passthrough",
+    )
 
     assert ker.fit_transform(X1).shape == (3, 10, 10)
     assert ker.transform(X2).shape == (3, 8, 10)
@@ -142,15 +152,12 @@ def test_column_kernelizer_multiple(backend):
     assert_array_almost_equal(linear(X1[:, :2]), ker.fit_transform(X1)[0])
     assert_array_almost_equal(poly(X1[:, 2:4]), ker.fit_transform(X1)[1], 5)
     assert_array_almost_equal(linear(X1[:, 4:]), ker.fit_transform(X1)[2])
-    assert_array_almost_equal(linear(X2[:, :2], X1[:, :2]),
-                              ker.transform(X2)[0])
-    assert_array_almost_equal(poly(X2[:, 2:4], X1[:, 2:4]),
-                              ker.transform(X2)[1], 5)
-    assert_array_almost_equal(linear(X2[:, 4:], X1[:, 4:]),
-                              ker.transform(X2)[2])
+    assert_array_almost_equal(linear(X2[:, :2], X1[:, :2]), ker.transform(X2)[0])
+    assert_array_almost_equal(poly(X2[:, 2:4], X1[:, 2:4]), ker.transform(X2)[1], 5)
+    assert_array_almost_equal(linear(X2[:, 4:], X1[:, 4:]), ker.transform(X2)[2])
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_pipeline(backend):
     backend = set_backend(backend)
 
@@ -160,16 +167,17 @@ def test_column_kernelizer_pipeline(backend):
     pipe = make_pipeline("passthrough", Kernelizer(kernel="poly"))
 
     function = Kernelizer.ALL_KERNELS["poly"]
-    ker = ColumnKernelizer([
-        ("name", pipe, slice(0, 4)),
-    ])
+    ker = ColumnKernelizer(
+        [
+            ("name", pipe, slice(0, 4)),
+        ]
+    )
 
     assert ker.fit_transform(X1).shape == (1, 10, 10)
     assert ker.transform(X2).shape == (1, 8, 10)
 
     assert_array_almost_equal(function(X1[:, :4]), ker.fit_transform(X1)[0])
-    assert_array_almost_equal(function(X2[:, :4], X1[:, :4]),
-                              ker.transform(X2)[0])
+    assert_array_almost_equal(function(X2[:, :4], X1[:, :4]), ker.transform(X2)[0])
 
 
 def test_column_kernelizer_end_with_a_kernel():
@@ -198,7 +206,7 @@ def test_column_kernelizer_end_with_a_kernel():
     assert _end_with_a_kernel(pipe) is True
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_make_column_kernelizer(backend):
     backend = set_backend(backend)
 
@@ -227,7 +235,7 @@ def test_make_column_kernelizer(backend):
     assert ck.transformers[1][2] == [3, 4]
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_in_pipeline(backend):
     backend = set_backend(backend)
 
@@ -242,13 +250,15 @@ def test_column_kernelizer_in_pipeline(backend):
         ck,
         MultipleKernelRidgeCV(
             kernels="precomputed",
-            solver_params=dict(n_iter=backend.ones_like(X, shape=(1, 2)),
-                               progress_bar=False)),
+            solver_params=dict(
+                n_iter=backend.ones_like(X, shape=(1, 2)), progress_bar=False
+            ),
+        ),
     )
     pipe.fit(X, Y)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernelizer_get_X_fit(backend):
     backend = set_backend(backend)
     X = backend.randn(10, 5)
@@ -262,20 +272,23 @@ def test_kernelizer_get_X_fit(backend):
     assert len(K) == len(X)  # same number of samples
 
 
-@pytest.mark.parametrize('estimator', [
-    make_column_kernelizer((Kernelizer("linear"), slice(0, 4))),
-    make_column_kernelizer(
-        (Kernelizer("linear"), slice(0, 4)),
-        ("drop", slice(4, 6)),
-        remainder='passthrough',
-    ),
-    make_column_kernelizer(
-        ("passthrough", slice(0, 2)),
-        ("passthrough", slice(0, 4)),
-        ("passthrough", slice(4, 5)),
-    ),
-])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize(
+    "estimator",
+    [
+        make_column_kernelizer((Kernelizer("linear"), slice(0, 4))),
+        make_column_kernelizer(
+            (Kernelizer("linear"), slice(0, 4)),
+            ("drop", slice(4, 6)),
+            remainder="passthrough",
+        ),
+        make_column_kernelizer(
+            ("passthrough", slice(0, 2)),
+            ("passthrough", slice(0, 4)),
+            ("passthrough", slice(4, 5)),
+        ),
+    ],
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_column_kernelizer_get_X_fit(estimator, backend):
     backend = set_backend(backend)
     X = backend.randn(10, 5)
@@ -291,7 +304,7 @@ def test_column_kernelizer_get_X_fit(estimator, backend):
         assert X.shape[0] == K.shape[0]  # same number of samples
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_centerer(backend):
     backend = set_backend(backend)
     X = backend.randn(10, 5) + 1
@@ -307,7 +320,7 @@ def test_kernel_centerer(backend):
     assert_array_almost_equal(K2, K_centered, decimal=5)
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_kernel_centerer_wrong_input(backend):
     backend = set_backend(backend)
     X = backend.randn(10, 5)
@@ -336,10 +349,12 @@ class Kernelizer_(Kernelizer):
         return backend.to_numpy(super().transform(X))
 
 
-@sklearn.utils.estimator_checks.parametrize_with_checks([
-    Kernelizer_(),
-])
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@sklearn.utils.estimator_checks.parametrize_with_checks(
+    [
+        Kernelizer_(),
+    ]
+)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_check_estimator(estimator, check, backend):
     backend = set_backend(backend)
     check(estimator)

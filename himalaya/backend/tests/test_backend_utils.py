@@ -7,19 +7,19 @@ from himalaya.backend import force_cpu_backend
 from himalaya.backend._utils import MATCHING_CPU_BACKEND
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_set_backend_correct(backend):
     # test the change of backend
     module = set_backend(backend)
-    assert module.__name__.split('.')[-1] == backend
+    assert module.__name__.split(".")[-1] == backend
 
     # test idempotence
     module = set_backend(set_backend(backend))
-    assert module.__name__.split('.')[-1] == backend
+    assert module.__name__.split(".")[-1] == backend
 
     # test set and get
     module = set_backend(get_backend())
-    assert module.__name__.split('.')[-1] == backend
+    assert module.__name__.split(".")[-1] == backend
 
     assert set_backend(backend)
 
@@ -36,7 +36,7 @@ def test_set_backend_incorrect():
             set_backend(backend, on_error="foo")
 
 
-class ToyEstimator():
+class ToyEstimator:
     def __init__(self, force_cpu):
         self.force_cpu = force_cpu
 
@@ -45,7 +45,7 @@ class ToyEstimator():
         return get_backend()
 
 
-@pytest.mark.parametrize('backend', ALL_BACKENDS)
+@pytest.mark.parametrize("backend", ALL_BACKENDS)
 def test_force_cpu_backend(backend):
     backend = set_backend(backend)
 

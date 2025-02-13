@@ -19,6 +19,7 @@ def plot_alphas_diagnostic(best_alphas, alphas, ax=None):
     ax : figure axis
     """
     import matplotlib.pyplot as plt
+
     alphas = np.sort(alphas)
     n_alphas = len(alphas)
     indices = np.argmin(np.abs(best_alphas[None] - alphas[:, None]), 0)
@@ -28,8 +29,8 @@ def plot_alphas_diagnostic(best_alphas, alphas, ax=None):
         fig, ax = plt.subplots(1, 1)
 
     log10alphas = np.log(alphas) / np.log(10)
-    ax.plot(log10alphas, hist, '.-', markersize=12)
-    ax.set_ylabel('Number of targets')
-    ax.set_xlabel('log10(alpha)')
+    ax.plot(log10alphas, hist, ".-", markersize=12)
+    ax.set_ylabel("Number of targets")
+    ax.set_xlabel("log10(alpha)")
     ax.grid("on")
     return ax

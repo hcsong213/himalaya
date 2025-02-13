@@ -6,8 +6,9 @@ from ..utils import _batch_or_skip
 from ._kernels import KernelCenterer
 
 
-def _weighted_kernel_ridge_gradient(Ks, Y, dual_weights, exp_deltas, alpha=1.,
-                                    double_K=False, return_objective=False):
+def _weighted_kernel_ridge_gradient(
+    Ks, Y, dual_weights, exp_deltas, alpha=1.0, double_K=False, return_objective=False
+):
     """Compute gradient of dual weights over a multi-kernel ridge regression.
 
     Parameters
@@ -41,18 +42,22 @@ def _weighted_kernel_ridge_gradient(Ks, Y, dual_weights, exp_deltas, alpha=1.,
         exp_deltas = exp_deltas[:, None]
 
     Ks_times_dualweights = backend.stack(
-        [backend.matmul(K, dual_weights).T for K in Ks], 2)
+        [backend.matmul(K, dual_weights).T for K in Ks], 2
+    )
 
-    predictions = backend.matmul(Ks_times_dualweights,
-                                 exp_deltas.T[..., None])[..., 0].T
+    predictions = backend.matmul(Ks_times_dualweights, exp_deltas.T[..., None])[
+        ..., 0
+    ].T
     residual = predictions - Y
     dampened_residual = residual + dual_weights * alpha
 
     if double_K:
         Ks_times_dampened_residual = backend.stack(
-            [backend.matmul(K, dampened_residual).T for K in Ks], 2)
+            [backend.matmul(K, dampened_residual).T for K in Ks], 2
+        )
         dual_weight_gradient = backend.matmul(
-            Ks_times_dampened_residual, exp_deltas.T[..., None])[..., 0].T
+            Ks_times_dampened_residual, exp_deltas.T[..., None]
+        )[..., 0].T
     else:
         dual_weight_gradient = dampened_residual
 
@@ -66,9 +71,21 @@ def _weighted_kernel_ridge_gradient(Ks, Y, dual_weights, exp_deltas, alpha=1.,
 
 
 def solve_weighted_kernel_ridge_gradient_descent(
-        Ks, Y, deltas, alpha=1., fit_intercept=False, step_sizes=None,
-        lipschitz_Ks=None, initial_dual_weights=None, max_iter=100, tol=1e-3,
-        double_K=False, random_state=None, debug=False, n_targets_batch=None):
+    Ks,
+    Y,
+    deltas,
+    alpha=1.0,
+    fit_intercept=False,
+    step_sizes=None,
+    lipschitz_Ks=None,
+    initial_dual_weights=None,
+    max_iter=100,
+    tol=1e-3,
+    double_K=False,
+    random_state=None,
+    debug=False,
+    n_targets_batch=None,
+):
     """Solve weighted kernel ridge regression using gradient descent.
 
     Solve the kernel ridge regression::
@@ -129,7 +146,7 @@ def solve_weighted_kernel_ridge_gradient_descent(
     if deltas.ndim == 1:
         deltas = deltas[:, None]
     if isinstance(alpha, numbers.Number) or alpha.ndim == 0:
-        alpha = backend.ones_like(Y, shape=(1, )) * alpha
+        alpha = backend.ones_like(Y, shape=(1,)) * alpha
 
     if Ks.shape[1] != Y.shape[0]:
         raise ValueError("Ks and Y must have the same number of samples.")
@@ -141,13 +158,11 @@ def solve_weighted_kernel_ridge_gradient_descent(
     if n_targets_batch is not None:
         # precompute the lipschitz constants to save time.
         if step_sizes is None and lipschitz_Ks is None:
-            lipschitz_Ks = compute_lipschitz_constants(
-                Ks, random_state=random_state)
+            lipschitz_Ks = compute_lipschitz_constants(Ks, random_state=random_state)
 
         dual_weights = backend.zeros_like(Y, device="cpu")
         if fit_intercept:
-            intercept = backend.zeros_like(Y, shape=(n_targets, ),
-                                           device="cpu")
+            intercept = backend.zeros_like(Y, shape=(n_targets,), device="cpu")
         for start in range(0, n_targets, n_targets_batch):
             batch = slice(start, start + n_targets_batch)
 
@@ -160,8 +175,9 @@ def solve_weighted_kernel_ridge_gradient_descent(
                 fit_intercept=fit_intercept,
                 step_sizes=_batch_or_skip(step_sizes, batch, axis=0),
                 lipschitz_Ks=lipschitz_Ks,
-                initial_dual_weights=_batch_or_skip(initial_dual_weights,
-                                                    batch, axis=2),
+                initial_dual_weights=_batch_or_skip(
+                    initial_dual_weights, batch, axis=2
+                ),
                 max_iter=max_iter,
                 tol=tol,
                 double_K=double_K,
@@ -182,9 +198,11 @@ def solve_weighted_kernel_ridge_gradient_descent(
 
     #################################################
     # Perform gradient descent on one batch of target
-    Ks, Y, deltas, alpha, step_sizes, lipschitz_Ks, initial_dual_weights = \
-        backend.check_arrays(Ks, Y, deltas, alpha, step_sizes, lipschitz_Ks,
-                             initial_dual_weights)
+    Ks, Y, deltas, alpha, step_sizes, lipschitz_Ks, initial_dual_weights = (
+        backend.check_arrays(
+            Ks, Y, deltas, alpha, step_sizes, lipschitz_Ks, initial_dual_weights
+        )
+    )
     exp_deltas = backend.exp(deltas)
 
     if fit_intercept:
@@ -197,29 +215,31 @@ def solve_weighted_kernel_ridge_gradient_descent(
 
     if step_sizes is None:
         if lipschitz_Ks is None:
-            lipschitz_Ks = compute_lipschitz_constants(
-                Ks, random_state=random_state)
+            lipschitz_Ks = compute_lipschitz_constants(Ks, random_state=random_state)
         if not double_K:
             lipschitz_Ks = backend.sqrt(lipschitz_Ks)
 
-        total_lip = backend.matmul(lipschitz_Ks[None, :],
-                                   exp_deltas)[0] + alpha
-        step_sizes = 1. / total_lip
+        total_lip = backend.matmul(lipschitz_Ks[None, :], exp_deltas)[0] + alpha
+        step_sizes = 1.0 / total_lip
 
         if debug:
             assert not backend.any(backend.isnan(step_sizes))
 
     if isinstance(step_sizes, numbers.Number) or step_sizes.ndim == 0:
-        step_sizes = backend.ones_like(Y, shape=(1, )) * step_sizes
+        step_sizes = backend.ones_like(Y, shape=(1,)) * step_sizes
 
     #######################
     # Gradient descent loop
     converged = backend.zeros_like(Y, dtype=backend.bool, shape=(n_targets))
     for i in range(max_iter):
-        grads = _weighted_kernel_ridge_gradient(Ks, Y[:, ~converged],
-                                                dual_weights[:, ~converged],
-                                                exp_deltas=exp_deltas,
-                                                alpha=alpha, double_K=double_K)
+        grads = _weighted_kernel_ridge_gradient(
+            Ks,
+            Y[:, ~converged],
+            dual_weights[:, ~converged],
+            exp_deltas=exp_deltas,
+            alpha=alpha,
+            double_K=double_K,
+        )
         update = step_sizes * grads
         dual_weights[:, ~converged] -= update
 
@@ -249,12 +269,18 @@ def solve_weighted_kernel_ridge_gradient_descent(
         return dual_weights
 
 
-def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
-                                                   fit_intercept=False,
-                                                   initial_dual_weights=None,
-                                                   max_iter=100, tol=1e-4,
-                                                   n_targets_batch=None,
-                                                   random_state=None):
+def solve_weighted_kernel_ridge_conjugate_gradient(
+    Ks,
+    Y,
+    deltas,
+    alpha=1.0,
+    fit_intercept=False,
+    initial_dual_weights=None,
+    max_iter=100,
+    tol=1e-4,
+    n_targets_batch=None,
+    random_state=None,
+):
     """Solve weighted kernel ridge regression using conjugate gradient.
 
     Solve the kernel ridge regression::
@@ -303,7 +329,7 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
     if deltas.ndim == 1:
         deltas = deltas[:, None]
     if isinstance(alpha, numbers.Number) or alpha.ndim == 0:
-        alpha = backend.ones_like(Y, shape=(1, )) * alpha
+        alpha = backend.ones_like(Y, shape=(1,)) * alpha
 
     if Ks.shape[1] != Y.shape[0]:
         raise ValueError("Ks and Y must have the same number of samples.")
@@ -316,8 +342,7 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
 
         dual_weights = backend.zeros_like(Y, device="cpu")
         if fit_intercept:
-            intercept = backend.zeros_like(Y, shape=(n_targets, ),
-                                           device="cpu")
+            intercept = backend.zeros_like(Y, shape=(n_targets,), device="cpu")
         for start in range(0, n_targets, n_targets_batch):
             batch = slice(start, start + n_targets_batch)
 
@@ -328,8 +353,9 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
                 deltas=_batch_or_skip(deltas, batch, axis=1),
                 alpha=_batch_or_skip(alpha, batch, 0),
                 fit_intercept=fit_intercept,
-                initial_dual_weights=_batch_or_skip(initial_dual_weights,
-                                                    batch, axis=2),
+                initial_dual_weights=_batch_or_skip(
+                    initial_dual_weights, batch, axis=2
+                ),
                 max_iter=max_iter,
                 tol=tol,
                 random_state=random_state,
@@ -349,7 +375,8 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
     ###################################################
     # Perform conjugate gradient on one batch of target
     Ks, Y, deltas, alpha, initial_dual_weights = backend.check_arrays(
-        Ks, Y, deltas, alpha, initial_dual_weights)
+        Ks, Y, deltas, alpha, initial_dual_weights
+    )
     exp_deltas = backend.exp(deltas)
 
     if fit_intercept:
@@ -361,9 +388,9 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
         dual_weights = backend.copy(initial_dual_weights)
 
     # compute initial residual
-    r = _weighted_kernel_ridge_gradient(Ks, Y, dual_weights,
-                                        exp_deltas=exp_deltas, alpha=alpha,
-                                        double_K=False)
+    r = _weighted_kernel_ridge_gradient(
+        Ks, Y, dual_weights, exp_deltas=exp_deltas, alpha=alpha, double_K=False
+    )
     r *= -1
     p = backend.copy(r)
     new_squared_residual_norm = backend.norm(r, axis=0) ** 2
@@ -373,15 +400,17 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
     converged = backend.zeros_like(Y, dtype=backend.bool, shape=(n_targets))
     for i in range(max_iter):
         Ks_x_p = backend.matmul(Ks, p)
-        tmp = backend.matmul(backend.transpose(Ks_x_p, (2, 1, 0)),
-                             backend.transpose(exp_deltas,
-                                               (1, 0))[:, :, None])[..., 0]
+        tmp = backend.matmul(
+            backend.transpose(Ks_x_p, (2, 1, 0)),
+            backend.transpose(exp_deltas, (1, 0))[:, :, None],
+        )[..., 0]
         K_x_p_plus_reg = backend.transpose(tmp, (1, 0)) + alpha * p
 
         squared_residual_norm = new_squared_residual_norm
         squared_p_A_norm = backend.matmul(
             backend.transpose(p, (1, 0))[:, None],
-            backend.transpose(K_x_p_plus_reg, (1, 0))[..., None])[:, 0, 0]
+            backend.transpose(K_x_p_plus_reg, (1, 0))[..., None],
+        )[:, 0, 0]
 
         squared_p_A_norm[squared_p_A_norm == 0] = 1
         alpha_step = squared_residual_norm / squared_p_A_norm
@@ -405,8 +434,7 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
 
             r = r[:, ~just_converged]
             p = p[:, ~just_converged]
-            new_squared_residual_norm = \
-                new_squared_residual_norm[~just_converged]
+            new_squared_residual_norm = new_squared_residual_norm[~just_converged]
             if exp_deltas.shape[1] == just_converged.shape[0]:
                 exp_deltas = exp_deltas[:, ~just_converged]
             if alpha.shape[0] == just_converged.shape[0]:
@@ -423,11 +451,19 @@ def solve_weighted_kernel_ridge_conjugate_gradient(Ks, Y, deltas, alpha=1.,
         return dual_weights
 
 
-def solve_weighted_kernel_ridge_neumann_series(Ks, Y, deltas, alpha=1.,
-                                               fit_intercept=False,
-                                               max_iter=10, factor=0.0001,
-                                               n_targets_batch=None, tol=None,
-                                               random_state=None, debug=False):
+def solve_weighted_kernel_ridge_neumann_series(
+    Ks,
+    Y,
+    deltas,
+    alpha=1.0,
+    fit_intercept=False,
+    max_iter=10,
+    factor=0.0001,
+    n_targets_batch=None,
+    tol=None,
+    random_state=None,
+    debug=False,
+):
     """Solve weighted kernel ridge regression using Neumann series.
 
     Solve the kernel ridge regression::
@@ -487,9 +523,9 @@ def solve_weighted_kernel_ridge_neumann_series(Ks, Y, deltas, alpha=1.,
     if deltas.ndim == 1:
         deltas = deltas[:, None]
     if isinstance(alpha, numbers.Number) or alpha.ndim == 0:
-        alpha = backend.ones_like(Y, shape=(1, )) * alpha
+        alpha = backend.ones_like(Y, shape=(1,)) * alpha
     if isinstance(factor, numbers.Number) or factor.ndim == 0:
-        factor = backend.ones_like(Y, shape=(1, )) * factor
+        factor = backend.ones_like(Y, shape=(1,)) * factor
 
     if Ks.shape[1] != Y.shape[0]:
         raise ValueError("Ks and Y must have the same number of samples.")
@@ -502,8 +538,7 @@ def solve_weighted_kernel_ridge_neumann_series(Ks, Y, deltas, alpha=1.,
         _, n_targets = Y.shape
         dual_weights = backend.zeros_like(Y, device="cpu")
         if fit_intercept:
-            intercept = backend.zeros_like(Y, shape=(n_targets, ),
-                                           device="cpu")
+            intercept = backend.zeros_like(Y, shape=(n_targets,), device="cpu")
         for start in range(0, n_targets, n_targets_batch):
             batch = slice(start, start + n_targets_batch)
 
@@ -535,8 +570,7 @@ def solve_weighted_kernel_ridge_neumann_series(Ks, Y, deltas, alpha=1.,
     ###################################################
     # Perform conjugate gradient on one batch of target
 
-    Ks, Y, deltas, alpha, factor = backend.check_arrays(
-        Ks, Y, deltas, alpha, factor)
+    Ks, Y, deltas, alpha, factor = backend.check_arrays(Ks, Y, deltas, alpha, factor)
     exp_deltas = backend.exp(deltas)
 
     if fit_intercept:
@@ -547,10 +581,9 @@ def solve_weighted_kernel_ridge_neumann_series(Ks, Y, deltas, alpha=1.,
     # sum accumulator: dual_weights = sum_ii product
     dual_weights = backend.zeros_like(Y)
     for ii in range(max_iter):
-        product = (
-            product * (1 - factor[None, :] * alpha[None, :]) -
-            factor[None, :] * backend.sum(
-                exp_deltas[:, None, :] * backend.matmul(Ks, product), axis=0))
+        product = product * (1 - factor[None, :] * alpha[None, :]) - factor[
+            None, :
+        ] * backend.sum(exp_deltas[:, None, :] * backend.matmul(Ks, product), axis=0)
         dual_weights += product
 
     dual_weights *= factor[None, :]
@@ -594,11 +627,17 @@ WEIGHTED_KERNEL_RIDGE_SOLVERS = {
 ###############################################################################
 
 
-def solve_kernel_ridge_conjugate_gradient(K, Y, alpha=1., fit_intercept=False,
-                                          initial_dual_weights=None,
-                                          max_iter=100, tol=1e-3,
-                                          random_state=None,
-                                          n_targets_batch=None):
+def solve_kernel_ridge_conjugate_gradient(
+    K,
+    Y,
+    alpha=1.0,
+    fit_intercept=False,
+    initial_dual_weights=None,
+    max_iter=100,
+    tol=1e-3,
+    random_state=None,
+    n_targets_batch=None,
+):
     """Solve kernel ridge regression using conjugate gradient.
 
     Solve the kernel ridge regression::
@@ -636,19 +675,35 @@ def solve_kernel_ridge_conjugate_gradient(K, Y, alpha=1., fit_intercept=False,
         Intercept. Only returned when fit_intercept is True.
     """
     backend = get_backend()
-    deltas = backend.zeros_like(K, shape=(1, ))
+    deltas = backend.zeros_like(K, shape=(1,))
     return solve_weighted_kernel_ridge_conjugate_gradient(
-        K[None], Y=Y, deltas=deltas, alpha=alpha, fit_intercept=fit_intercept,
-        initial_dual_weights=initial_dual_weights, max_iter=max_iter, tol=tol,
-        n_targets_batch=n_targets_batch)
+        K[None],
+        Y=Y,
+        deltas=deltas,
+        alpha=alpha,
+        fit_intercept=fit_intercept,
+        initial_dual_weights=initial_dual_weights,
+        max_iter=max_iter,
+        tol=tol,
+        n_targets_batch=n_targets_batch,
+    )
 
 
-def solve_kernel_ridge_gradient_descent(K, Y, alpha=1., fit_intercept=False,
-                                        step_sizes=None, lipschitz_Ks=None,
-                                        initial_dual_weights=None,
-                                        max_iter=100, tol=1e-3, double_K=False,
-                                        random_state=None, debug=False,
-                                        n_targets_batch=None):
+def solve_kernel_ridge_gradient_descent(
+    K,
+    Y,
+    alpha=1.0,
+    fit_intercept=False,
+    step_sizes=None,
+    lipschitz_Ks=None,
+    initial_dual_weights=None,
+    max_iter=100,
+    tol=1e-3,
+    double_K=False,
+    random_state=None,
+    debug=False,
+    n_targets_batch=None,
+):
     """Solve kernel ridge regression using conjugate gradient.
 
     Solve the kernel ridge regression
@@ -698,19 +753,35 @@ def solve_kernel_ridge_gradient_descent(K, Y, alpha=1., fit_intercept=False,
         Intercept. Only returned when fit_intercept is True.
     """
     backend = get_backend()
-    deltas = backend.zeros_like(K, shape=(1, ))
+    deltas = backend.zeros_like(K, shape=(1,))
     return solve_weighted_kernel_ridge_gradient_descent(
-        K[None], Y=Y, deltas=deltas, alpha=alpha, step_sizes=step_sizes,
-        lipschitz_Ks=lipschitz_Ks, initial_dual_weights=initial_dual_weights,
-        max_iter=max_iter, tol=tol, double_K=double_K,
-        random_state=random_state, debug=debug, fit_intercept=fit_intercept,
-        n_targets_batch=n_targets_batch)
+        K[None],
+        Y=Y,
+        deltas=deltas,
+        alpha=alpha,
+        step_sizes=step_sizes,
+        lipschitz_Ks=lipschitz_Ks,
+        initial_dual_weights=initial_dual_weights,
+        max_iter=max_iter,
+        tol=tol,
+        double_K=double_K,
+        random_state=random_state,
+        debug=debug,
+        fit_intercept=fit_intercept,
+        n_targets_batch=n_targets_batch,
+    )
 
 
-def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
-                                   fit_intercept=False,
-                                   negative_eigenvalues="zeros",
-                                   n_targets_batch=None, random_state=None):
+def solve_kernel_ridge_eigenvalues(
+    K,
+    Y,
+    alpha=1.0,
+    method="eigh",
+    fit_intercept=False,
+    negative_eigenvalues="zeros",
+    n_targets_batch=None,
+    random_state=None,
+):
     """Solve kernel ridge regression using eigenvalues decomposition.
 
     Solve the kernel ridge regression::
@@ -752,7 +823,7 @@ def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
     """
     backend = get_backend()
     if isinstance(alpha, numbers.Number) or alpha.ndim == 0:
-        alpha = backend.ones_like(Y, shape=(1, )) * alpha
+        alpha = backend.ones_like(Y, shape=(1,)) * alpha
 
     K, Y, alpha = backend.check_arrays(K, Y, alpha)
 
@@ -778,7 +849,7 @@ def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
         # SVD: K = U @ np.diag(eigenvalues) @ Vt
         U, eigenvalues, Vt = backend.svd(K)
     else:
-        raise ValueError("Unknown method=%r." % (method, ))
+        raise ValueError("Unknown method=%r." % (method,))
 
     inverse = 1 / (alpha[None] + eigenvalues[:, None])
 
@@ -787,7 +858,8 @@ def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
         if negative_eigenvalues == "nan":
             if alpha < -eigenvalues[0] * 2:
                 return backend.ones_like(Y) * backend.asarray(
-                    backend.nan, dtype=Y.dtype)
+                    backend.nan, dtype=Y.dtype
+                )
             else:
                 pass
 
@@ -798,14 +870,15 @@ def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
             raise RuntimeError(
                 "Negative eigenvalues. Make sure the kernel is positive "
                 "semi-definite, increase the regularization alpha, or use"
-                "another solver.")
+                "another solver."
+            )
         else:
-            raise ValueError("Unknown negative_eigenvalues=%r." %
-                             (negative_eigenvalues, ))
+            raise ValueError(
+                "Unknown negative_eigenvalues=%r." % (negative_eigenvalues,)
+            )
 
     n_samples, n_targets = Y.shape
-    dual_weights = backend.zeros_like(K, shape=(n_samples, n_targets),
-                                      device="cpu")
+    dual_weights = backend.zeros_like(K, shape=(n_samples, n_targets), device="cpu")
     if n_targets_batch is None:
         n_targets_batch = n_targets
 
@@ -826,8 +899,10 @@ def solve_kernel_ridge_eigenvalues(K, Y, alpha=1., method="eigh",
         dual_weights[:, batch] = backend.to_cpu(weights_batch)
 
     if fit_intercept:
-        intercept = backend.to_cpu(Y_offset) - backend.to_cpu(
-            centerer.K_fit_rows_) @ dual_weights
+        intercept = (
+            backend.to_cpu(Y_offset)
+            - backend.to_cpu(centerer.K_fit_rows_) @ dual_weights
+        )
         return dual_weights, intercept
     else:
         return dual_weights
