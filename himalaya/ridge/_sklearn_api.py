@@ -487,7 +487,7 @@ class GroupRidgeCV(_BaseRidge):
         self.force_cpu = force_cpu
 
     @force_cpu_backend
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, hparams=None):
         """Fit the model.
 
         Parameters
@@ -505,6 +505,9 @@ class GroupRidgeCV(_BaseRidge):
         -------
         self : returns an instance of self.
         """
+        if hparams is not None:
+            assert len(hparams) == 2
+
         backend = get_backend()
 
         Xs = self._split_groups(X, check=True)
@@ -535,12 +538,11 @@ class GroupRidgeCV(_BaseRidge):
             random_state=self.random_state,
             fit_intercept=self.fit_intercept,
             Y_in_cpu=self.Y_in_cpu,
+            # hparams=hparams
         )
         self.deltas_, self.coef_, self.cv_scores_ = tmp[:3]
         if self.fit_intercept:
             self.intercept_ = tmp[3]
-
-        print("💡 Hello world from himalaya/ridge/_sklearn_api.py !")
 
         self.best_gammas_, self.best_alphas_ret_ = tmp[-2:]
 

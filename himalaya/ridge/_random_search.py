@@ -13,6 +13,287 @@ from ..kernel_ridge import generate_dirichlet_samples
 from ..kernel_ridge._random_search import _select_best_alphas
 
 
+def solve_group_ridge_deterministic(
+    Xs,
+    Y,
+    hparams,
+    fit_intercept=False,
+    score_func=l2_neg_loss,
+    cv=5,
+    return_weights=False,
+    random_state=None,
+    n_targets_batch=None,
+    n_targets_batch_refit=None,
+    n_alphas_batch=None,
+    progress_bar=True,
+    conservative=False,
+    Y_in_cpu=False,
+    diagonalize_method="svd",
+    warn=True,
+):
+    """Solve group ridge regression using random search on the simplex.
+
+    Solve the group-regularized ridge regression::
+
+        b* = argmin_b ||Z @ b - Y||^2 + ||b||^2
+
+    where the feature space X_i is scaled by a group scaling ::
+
+        Z_i = exp(deltas[i] / 2) X_i
+
+    Parameters
+    ----------
+    Xs : list of len (n_spaces), with arrays of shape (n_samples, n_features)
+        Input features.
+    Y : array of shape (n_samples, n_targets)
+        Target data.
+    n_iter : int, or array of shape (n_iter, n_spaces)
+        Number of feature-space weights combination to search.
+        If an array is given, the solver uses it as the list of weights
+        to try, instead of sampling from a Dirichlet distribution.
+    concentration : float, or list of float
+        Concentration parameters of the Dirichlet distribution.
+        If a list, iteratively cycle through the list.
+        Not used if n_iter is an array.
+    alphas : float or array of shape (n_alphas, )
+        Range of ridge regularization parameter. The log group-weights
+        ``deltas`` are equal to log(gamma/alpha), where gamma is randomly
+        sampled on the simplex, and alpha is selected from a list of
+        candidates.
+    fit_intercept : boolean
+        Whether to fit an intercept.
+        If False, Xs and Y must be zero-mean over samples.
+    score_func : callable
+        Function used to compute the score of predictions versus Y.
+    cv : int or scikit-learn splitter
+        Cross-validation splitter. If an int, KFold is used.
+    return_weights : bool
+        Whether to refit on the entire dataset and return the weights.
+    local_alpha : bool
+        If True, alphas are selected per target, else shared over all targets.
+    jitter_alphas : bool
+        If True, alphas range is slightly jittered for each gamma.
+    random_state : int, or None
+        Random generator seed. Use an int for deterministic search.
+    n_targets_batch : int or None
+        Size of the batch for over targets during cross-validation.
+        Used for memory reasons. If None, uses all n_targets at once.
+    n_targets_batch_refit : int or None
+        Size of the batch for over targets during refit.
+        Used for memory reasons. If None, uses all n_targets at once.
+    n_alphas_batch : int or None
+        Size of the batch for over alphas. Used for memory reasons.
+        If None, uses all n_alphas at once.
+    progress_bar : bool
+        If True, display a progress bar over gammas.
+    conservative : bool
+        If True, when selecting the hyperparameter alpha, take the largest one
+        that is less than one standard deviation away from the best.
+        If False, take the best.
+    Y_in_cpu : bool
+        If True, keep the target values ``Y`` in CPU memory (slower).
+    diagonalize_method : str in {"svd"}
+        Method used to diagonalize the features.
+    warn : bool
+        If True, warn if the number of samples is smaller than the number of
+        features.
+
+    Returns
+    -------
+    deltas : array of shape (n_spaces, n_targets)
+        Best log feature-space weights for each target.
+    refit_weights : array of shape (n_features, n_targets), or None
+        Refit regression weights on the entire dataset, using selected best
+        hyperparameters. Refit weights are always stored on CPU memory.
+    cv_scores : array of shape (n_iter, n_targets)
+        Cross-validation scores per iteration, averaged over splits, for the
+        best alpha. Cross-validation scores will always be on CPU memory.
+    intercept : array of shape (n_targets,)
+        Intercept. Only returned when fit_intercept is True.
+    """
+    backend = get_backend()
+
+    if len(hparams) != 2:
+        raise ValueError(
+            "hparams should be length two and hold values [gammas, alphas]"
+        )
+
+    best_gammas, best_alphas = hparams
+
+    n_spaces = len(Xs)
+
+    if isinstance(alphas, numbers.Number) or alphas.ndim == 0:
+        alphas = backend.ones_like(Y, shape=(1,)) * alphas
+
+    dtype = Xs[0].dtype
+    Xs = [backend.asarray(X, dtype=dtype, device=device) for X in Xs]
+    device = getattr(Xs, "device", None)
+    Y = backend.asarray(Y, dtype=dtype, device="cpu" if Y_in_cpu else device)
+
+    # stack all features
+    X_ = backend.concatenate(Xs, 1)
+    n_features_list = [X.shape[1] for X in Xs]
+    n_features = X_.shape[1]
+    start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
+    slices = [
+        slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])
+    ]
+    del Xs
+
+    n_samples, n_features = X_.shape
+    # if n_samples < n_features and warn:
+    #     warnings.warn(
+    #         "Solving banded ridge is slower than solving multiple-kernel ridge"
+    #         f" when n_samples < n_features (here {n_samples} < {n_features}). "
+    #         "Using linear kernels in "
+    #         "himalaya.kernel_ridge.MultipleKernelRidgeCV or "
+    #         "himalaya.kernel_ridge.solve_multiple_kernel_ridge_random_search "
+    #         "would be faster. Use warn=False to silence this warning.",
+    #         UserWarning,
+    #     )
+    if X_.shape[0] != Y.shape[0]:
+        raise ValueError("X and Y must have the same number of samples.")
+
+    X_offset, Y_offset = None, None
+    if fit_intercept:
+        X_offset = X_.mean(0)
+        Y_offset = Y.mean(0)
+        X_ = X_ - X_offset
+        Y = Y - Y_offset
+
+    n_samples, n_targets = Y.shape
+    if n_targets_batch is None:
+        n_targets_batch = n_targets
+    if n_targets_batch_refit is None:
+        n_targets_batch_refit = n_targets_batch
+    if n_alphas_batch is None:
+        n_alphas_batch = len(alphas)
+
+    cv = check_cv(cv, Y)
+    n_splits = cv.get_n_splits()
+    for train, val in cv.split(Y):
+        if len(val) == 0 or len(train) == 0:
+            raise ValueError(
+                "Empty train or validation set. "
+                "Check that `cv` is correctly defined."
+            )
+
+    random_generator, given_alphas = None, None
+
+    # TODO
+    cv_scores = None
+    pass
+
+    # initialize refit ridge weights
+    refit_weights = None
+    if return_weights:
+        refit_weights = backend.zeros_like(
+            best_gammas, shape=(n_features, n_targets), device="cpu"
+        )
+
+    # Main loop
+    for gamma in bar(
+        backend.unique(best_gammas, axis=1),
+        "Deterministic fitting with cv",
+        use_it=progress_bar,
+    ):
+
+        X_ *= backend.sqrt(gamma)
+
+        # Compute mask, which is the columns in which current set of gammas was used.
+        cond = best_gammas.T == gamma  # We see which columns match the current set of gammas 
+        mask = cond[:, 0] * cond[:, 1]
+        mask = mask.nonzero()
+
+
+                # 🟢 compute primal or dual weights on the entire dataset (nocv)
+        if return_weights:
+            update_indices = backend.flatnonzero(mask)
+            if Y_in_cpu:
+                update_indices = backend.to_cpu(update_indices)
+            if len(update_indices) > 0:
+
+                # *refit weights* only for alphas used by at least one target
+                used_alphas = backend.unique(best_alphas[mask])
+                primal_weights = backend.zeros_like(
+                    X_, shape=(n_features, len(update_indices)), device="cpu"
+                )
+                for matrix, alpha_batch in _decompose_ridge(
+                    Xtrain=X_,
+                    alphas=used_alphas,
+                    negative_eigenvalues="zeros",
+                    n_alphas_batch=min(len(used_alphas), n_alphas_batch),
+                    method=diagonalize_method,
+                ):
+
+                    for start in range(0, len(update_indices), n_targets_batch_refit):
+                        batch = slice(start, start + n_targets_batch_refit)
+
+                        weights = backend.matmul(
+                            matrix,
+                            backend.to_gpu(Y[:, update_indices[batch]], device=device),
+                        )
+                        # used_n_alphas_batch, n_features, n_targets_batch = \
+                        # weights.shape
+
+                        # select alphas corresponding to best cv_score
+                        alphas_indices = backend.searchsorted(
+                            used_alphas, best_alphas[mask][batch]
+                        )
+                        # mask targets whose selected alphas are outside the
+                        # alpha batch
+                        mask2 = backend.isin(
+                            alphas_indices,
+                            backend.arange(len(used_alphas))[alpha_batch],
+                        )
+                        # get indices in alpha_batch
+                        alphas_indices = backend.searchsorted(
+                            backend.arange(len(used_alphas))[alpha_batch],
+                            alphas_indices[mask2],
+                        )
+                        # update corresponding weights
+                        mask_target = backend.arange(weights.shape[2])
+                        mask_target = backend.to_gpu(mask_target)[mask2]
+                        tmp = weights[alphas_indices, :, mask_target]
+                        primal_weights[:, batch][:, backend.to_cpu(mask2)] = (
+                            backend.to_cpu(tmp).T
+                        )
+                        del weights, alphas_indices, mask2, mask_target
+                    del matrix
+
+                # multiply again by np.sqrt(g), as we then want to use
+                # the primal weights on the unscaled features Xs, and not
+                # on the scaled features (np.sqrt(g) * Xs)
+                for kk in range(n_spaces):
+                    primal_weights[slices[kk]] *= backend.to_cpu(
+                        backend.sqrt(gamma[kk])
+                    )
+                refit_weights[:, backend.to_cpu(mask)] = primal_weights
+                del primal_weights
+
+            del update_indices
+
+        # 🟢
+        del mask
+
+        for kk in range(n_spaces):
+            X_[:, slices[kk]] /= backend.sqrt(gamma[kk])
+
+    # end main loop
+
+    deltas = backend.log(best_gammas / best_alphas[None, :])
+
+    if fit_intercept:
+        intercept = (
+            (backend.to_cpu(Y_offset) - backend.to_cpu(X_offset) @ refit_weights)
+            if return_weights
+            else None
+        )
+        return deltas, refit_weights, cv_scores, intercept, best_gammas, best_alphas
+    else:
+        return deltas, refit_weights, cv_scores, best_gammas, best_alphas
+
+
 def solve_group_ridge_random_search(
     Xs,
     Y,
@@ -117,6 +398,7 @@ def solve_group_ridge_random_search(
     """
     backend = get_backend()
     n_spaces = len(Xs)
+    # 🟢
     if isinstance(n_iter, int):
         gammas = generate_dirichlet_samples(
             n_samples=n_iter,
@@ -210,6 +492,8 @@ def solve_group_ridge_random_search(
             gammas, shape=(n_features, n_targets), device="cpu"
         )
 
+    # Main random search loop
+    # 🔴
     for ii, gamma in enumerate(
         bar(gammas, "%d random sampling with cv" % len(gammas), use_it=progress_bar)
     ):
@@ -223,7 +507,7 @@ def solve_group_ridge_random_search(
 
         scores = backend.zeros_like(gammas, shape=(n_splits, len(alphas), n_targets))
 
-        # 🟣 Not needed
+        # 🟣 cv
         for jj, (train, test) in enumerate(cv.split(X_)):
             train = backend.to_gpu(train, device=device)
             test = backend.to_gpu(test, device=device)
@@ -282,22 +566,22 @@ def solve_group_ridge_random_search(
         cv_scores[ii, :] = backend.to_cpu(cv_scores_ii)
 
         # update best_gammas and best_alphas
+        # 🔴
         epsilon = np.finfo(_dtype_to_str(dtype)).eps
-        mask = cv_scores_ii > current_best_scores + epsilon
+        mask = cv_scores_ii > current_best_scores + epsilon  # for current gamma, these are the voxels you will update
         current_best_scores[mask] = cv_scores_ii[mask]
 
-        # 🟢 best_* are probably all that is needed, which we can pass in
         best_gammas[:, mask] = gamma[:, None]
         best_alphas[mask] = alphas[alphas_argmax[mask]]
 
-        # compute primal or dual weights on the entire dataset (nocv)
+        # 🟢 compute primal or dual weights on the entire dataset (nocv)
         if return_weights:
             update_indices = backend.flatnonzero(mask)
             if Y_in_cpu:
                 update_indices = backend.to_cpu(update_indices)
             if len(update_indices) > 0:
 
-                # refit weights only for alphas used by at least one target
+                # *refit weights* only for alphas used by at least one target
                 used_alphas = backend.unique(best_alphas[mask])
                 primal_weights = backend.zeros_like(
                     X_, shape=(n_features, len(update_indices)), device="cpu"
@@ -356,6 +640,8 @@ def solve_group_ridge_random_search(
                 del primal_weights
 
             del update_indices
+
+        # 🟢
         del mask
 
         for kk in range(n_spaces):
