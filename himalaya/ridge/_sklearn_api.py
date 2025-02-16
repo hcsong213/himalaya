@@ -475,7 +475,18 @@ class GroupRidgeCV(_BaseRidge):
         random_state=None,
         Y_in_cpu=False,
         force_cpu=False,
+        hparams=None,
     ):
+
+        if solver == "deterministic":
+            if hparams is None:
+                raise ValueError(
+                    "deterministic solver requires hparams to be specified."
+                )
+
+        if hparams is not None:
+            if len(hparams) != 2:
+                raise ValueError("hparams should be len 2 (with values gammas, alphas)")
 
         self.groups = groups
         self.solver = solver
@@ -485,9 +496,10 @@ class GroupRidgeCV(_BaseRidge):
         self.random_state = random_state
         self.Y_in_cpu = Y_in_cpu
         self.force_cpu = force_cpu
+        self.hparams = hparams
 
     @force_cpu_backend
-    def fit(self, X, y=None, hparams=None):
+    def fit(self, X, y=None):
         """Fit the model.
 
         Parameters
@@ -505,8 +517,8 @@ class GroupRidgeCV(_BaseRidge):
         -------
         self : returns an instance of self.
         """
-        if hparams is not None:
-            assert len(hparams) == 2
+
+        print("🙏 02/15/2025 Updates in _sklearn_api.py")
 
         backend = get_backend()
 
@@ -530,21 +542,31 @@ class GroupRidgeCV(_BaseRidge):
         cv = check_cv(self.cv, y)
 
         # ------------------ call the solver
-        tmp = self._call_solver(
-            Xs=Xs,
-            Y=y,
-            cv=cv,
-            return_weights=True,
-            random_state=self.random_state,
-            fit_intercept=self.fit_intercept,
-            Y_in_cpu=self.Y_in_cpu,
-            # hparams=hparams
-        )
-        self.deltas_, self.coef_, self.cv_scores_ = tmp[:3]
-        if self.fit_intercept:
-            self.intercept_ = tmp[3]
+        # TODO: Make this cleaner
+        if self.solver == "random_search":
+            tmp = self._call_solver(
+                Xs=Xs,
+                Y=y,
+                cv=cv,
+                return_weights=True,
+                random_state=self.random_state,
+                fit_intercept=self.fit_intercept,
+                Y_in_cpu=self.Y_in_cpu,
+            )
+        else:  # self.solver == "deterministic"
+            tmp = self._call_solver(
+                Xs=Xs,
+                Y=y,
+                hparams=self.hparams,
+                cv=cv,
+                return_weights=True,
+                fit_intercept=self.fit_intercept,
+                Y_in_cpu=self.Y_in_cpu,
+            )
 
-        self.best_gammas_, self.best_alphas_ret_ = tmp[-2:]
+        self.deltas_, self.coef_, self.cv_scores_, self.best_gammas_ = tmp[:4]
+        if self.fit_intercept:
+            self.intercept_ = tmp[4]
 
         if self.solver == "random_search":
             self.best_alphas_ = 1.0 / backend.exp(self.deltas_).sum(0)

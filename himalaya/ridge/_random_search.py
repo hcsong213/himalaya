@@ -18,10 +18,8 @@ def solve_group_ridge_deterministic(
     Y,
     hparams,
     fit_intercept=False,
-    score_func=l2_neg_loss,
     cv=5,
     return_weights=False,
-    random_state=None,
     n_targets_batch=None,
     n_targets_batch_refit=None,
     n_alphas_batch=None,
@@ -111,6 +109,8 @@ def solve_group_ridge_deterministic(
     intercept : array of shape (n_targets,)
         Intercept. Only returned when fit_intercept is True.
     """
+    print("🐛 02/15/2025 Updates in _random_search.py > deterministic")
+
     backend = get_backend()
 
     if len(hparams) != 2:
@@ -122,12 +122,11 @@ def solve_group_ridge_deterministic(
 
     n_spaces = len(Xs)
 
-    if isinstance(alphas, numbers.Number) or alphas.ndim == 0:
-        alphas = backend.ones_like(Y, shape=(1,)) * alphas
-
     dtype = Xs[0].dtype
-    Xs = [backend.asarray(X, dtype=dtype, device=device) for X in Xs]
-    device = getattr(Xs, "device", None)
+    best_gammas = backend.asarray(best_gammas, dtype=dtype)
+    best_alphas = backend.asarray(best_alphas, dtype=dtype)
+    device = getattr(best_gammas, "device", None)
+    Xs = [backend.asarray(X, dtype=dtype) for X in Xs]
     Y = backend.asarray(Y, dtype=dtype, device="cpu" if Y_in_cpu else device)
 
     # stack all features
@@ -167,7 +166,7 @@ def solve_group_ridge_deterministic(
     if n_targets_batch_refit is None:
         n_targets_batch_refit = n_targets_batch
     if n_alphas_batch is None:
-        n_alphas_batch = len(alphas)
+        n_alphas_batch = len(best_alphas)
 
     cv = check_cv(cv, Y)
     n_splits = cv.get_n_splits()
@@ -178,35 +177,36 @@ def solve_group_ridge_deterministic(
                 "Check that `cv` is correctly defined."
             )
 
-    random_generator, given_alphas = None, None
-
-    # TODO
-    cv_scores = None
-    pass
-
     # initialize refit ridge weights
     refit_weights = None
     if return_weights:
         refit_weights = backend.zeros_like(
             best_gammas, shape=(n_features, n_targets), device="cpu"
         )
+        print(
+            "🐛 At _random_search.py deterministic: refit_weights initial shape",
+            refit_weights.shape,
+        )
+
+    unique_gammas = backend.unique(best_gammas, axis=1).T
+    print("best_gammas processed: ", unique_gammas)
 
     # Main loop
     for gamma in bar(
-        backend.unique(best_gammas, axis=1),
+        unique_gammas,
         "Deterministic fitting with cv",
         use_it=progress_bar,
     ):
-
-        X_ *= backend.sqrt(gamma)
+        for kk in range(n_spaces):
+            X_[:, slices[kk]] *= backend.sqrt(gamma[kk])
 
         # Compute mask, which is the columns in which current set of gammas was used.
-        cond = best_gammas.T == gamma  # We see which columns match the current set of gammas 
+        cond = (
+            best_gammas.T == gamma
+        )  # We see which columns match the current set of gammas
         mask = cond[:, 0] * cond[:, 1]
-        mask = mask.nonzero()
 
-
-                # 🟢 compute primal or dual weights on the entire dataset (nocv)
+        # 🟢 compute primal or dual weights on the entire dataset (nocv)
         if return_weights:
             update_indices = backend.flatnonzero(mask)
             if Y_in_cpu:
@@ -218,6 +218,7 @@ def solve_group_ridge_deterministic(
                 primal_weights = backend.zeros_like(
                     X_, shape=(n_features, len(update_indices)), device="cpu"
                 )
+                # 🔴 TODO: Get rid of for loop and use the predetermined best alpha instead.
                 for matrix, alpha_batch in _decompose_ridge(
                     Xtrain=X_,
                     alphas=used_alphas,
@@ -268,6 +269,7 @@ def solve_group_ridge_deterministic(
                     primal_weights[slices[kk]] *= backend.to_cpu(
                         backend.sqrt(gamma[kk])
                     )
+
                 refit_weights[:, backend.to_cpu(mask)] = primal_weights
                 del primal_weights
 
@@ -282,6 +284,7 @@ def solve_group_ridge_deterministic(
     # end main loop
 
     deltas = backend.log(best_gammas / best_alphas[None, :])
+    cv_scores = None
 
     if fit_intercept:
         intercept = (
@@ -396,6 +399,8 @@ def solve_group_ridge_random_search(
     intercept : array of shape (n_targets,)
         Intercept. Only returned when fit_intercept is True.
     """
+    print("🐛 02/15/2025 Updates in _random_search.py > random search")
+
     backend = get_backend()
     n_spaces = len(Xs)
     # 🟢
@@ -568,7 +573,9 @@ def solve_group_ridge_random_search(
         # update best_gammas and best_alphas
         # 🔴
         epsilon = np.finfo(_dtype_to_str(dtype)).eps
-        mask = cv_scores_ii > current_best_scores + epsilon  # for current gamma, these are the voxels you will update
+        mask = (
+            cv_scores_ii > current_best_scores + epsilon
+        )  # for current gamma, these are the voxels you will update
         current_best_scores[mask] = cv_scores_ii[mask]
 
         best_gammas[:, mask] = gamma[:, None]
@@ -636,6 +643,7 @@ def solve_group_ridge_random_search(
                     primal_weights[slices[kk]] *= backend.to_cpu(
                         backend.sqrt(gamma[kk])
                     )
+
                 refit_weights[:, backend.to_cpu(mask)] = primal_weights
                 del primal_weights
 
@@ -655,9 +663,9 @@ def solve_group_ridge_random_search(
             if return_weights
             else None
         )
-        return deltas, refit_weights, cv_scores, intercept, best_gammas, best_alphas
+        return deltas, refit_weights, cv_scores, best_gammas, intercept
     else:
-        return deltas, refit_weights, cv_scores, best_gammas, best_alphas
+        return deltas, refit_weights, cv_scores, best_gammas
 
 
 def _decompose_ridge(
@@ -753,6 +761,7 @@ def _decompose_ridge(
 #: Dictionary with all group ridge solvers
 GROUP_RIDGE_SOLVERS = {
     "random_search": solve_group_ridge_random_search,
+    "deterministic": solve_group_ridge_deterministic,
 }
 
 
