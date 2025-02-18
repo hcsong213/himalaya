@@ -2,7 +2,7 @@ from ._column import ColumnTransformerNoStack
 from ._column import make_column_transformer_no_stack
 from ._random_search import solve_group_ridge_random_search
 from ._random_search import solve_ridge_cv_svd
-from ._random_search import GROUP_RIDGE_SOLVERS
+from ._solvers import GROUP_RIDGE_SOLVERS
 from ._solvers import solve_ridge_svd
 from ._solvers import RIDGE_SOLVERS
 from ._sklearn_api import Ridge

@@ -4,7 +4,7 @@ from sklearn.base import BaseEstimator, RegressorMixin, MultiOutputMixin
 from sklearn.utils.validation import check_is_fitted
 
 from ._solvers import RIDGE_SOLVERS
-from ._random_search import GROUP_RIDGE_SOLVERS
+from . import GROUP_RIDGE_SOLVERS
 from ._random_search import solve_ridge_cv_svd
 
 from ..validation import check_array
