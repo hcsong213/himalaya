@@ -518,8 +518,6 @@ class GroupRidgeCV(_BaseRidge):
         self : returns an instance of self.
         """
 
-        print("🙏 02/15/2025 Updates in _sklearn_api.py")
-
         backend = get_backend()
 
         Xs = self._split_groups(X, check=True)

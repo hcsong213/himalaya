@@ -117,7 +117,6 @@ def solve_group_ridge_random_search(
     intercept : array of shape (n_targets,)
         Intercept. Only returned when fit_intercept is True.
     """
-    print("🐛 02/15/2025 Updates in _random_search.py > random search")
 
     backend = get_backend()
     n_spaces = len(Xs)
