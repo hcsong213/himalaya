@@ -462,6 +462,7 @@ class GroupRidgeCV(_BaseRidge):
     >>> pipe = make_pipeline(ct, model)
     >>> _ = pipe.fit(X, Y)
     """
+    print('🏔️: from himalaya/ridge/_sklearn_api.py: Using modified himalaya')
 
     ALL_SOLVERS = GROUP_RIDGE_SOLVERS
 
@@ -476,6 +477,7 @@ class GroupRidgeCV(_BaseRidge):
         Y_in_cpu=False,
         force_cpu=False,
         hparams=None,
+        unique_alphas=None,
     ):
 
         if solver == "deterministic":
@@ -497,6 +499,7 @@ class GroupRidgeCV(_BaseRidge):
         self.Y_in_cpu = Y_in_cpu
         self.force_cpu = force_cpu
         self.hparams = hparams
+        self.unique_alphas = unique_alphas
 
     @force_cpu_backend
     def fit(self, X, y=None):
@@ -556,6 +559,7 @@ class GroupRidgeCV(_BaseRidge):
                 Xs=Xs,
                 Y=y,
                 hparams=self.hparams,
+                used_alphas=self.unique_alphas,
                 cv=cv,
                 return_weights=True,
                 fit_intercept=self.fit_intercept,

@@ -152,6 +152,7 @@ def solve_group_ridge_deterministic(
     Xs,
     Y,
     hparams,
+    used_alphas=None,
     fit_intercept=False,
     cv=5,
     return_weights=False,
@@ -296,12 +297,12 @@ def solve_group_ridge_deterministic(
         refit_weights = backend.zeros_like(
             best_gammas, shape=(n_features, n_targets), device="cpu"
         )
-        print(
-            "🐛 At _random_search.py deterministic: refit_weights initial shape",
-            refit_weights.shape,
-        )
 
-    unique_gammas = backend.unique(best_gammas, axis=1).T
+    if get_backend() in ("numpy", "cupy"):
+        unique_gammas = backend.unique(best_gammas, axis=1).T
+    else:
+        unique_gammas = backend.unique(best_gammas, dim=1).T
+
     print("best_gammas processed: ", unique_gammas)
 
     # Main loop
@@ -327,7 +328,9 @@ def solve_group_ridge_deterministic(
             if len(update_indices) > 0:
 
                 # *refit weights* only for alphas used by at least one target
-                used_alphas = backend.unique(best_alphas[mask])
+                if used_alphas is None:
+                    used_alphas = backend.unique(best_alphas[mask])
+
                 primal_weights = backend.zeros_like(
                     X_, shape=(n_features, len(update_indices)), device="cpu"
                 )
