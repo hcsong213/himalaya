@@ -303,8 +303,6 @@ def solve_group_ridge_deterministic(
     else:
         unique_gammas = backend.unique(best_gammas, dim=1).T
 
-    print("best_gammas processed: ", unique_gammas)
-
     # Main loop
     for gamma in bar(
         unique_gammas,

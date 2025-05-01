@@ -231,8 +231,10 @@ def solve_group_ridge_random_search(
 
         # 🟣 cv
         for jj, (train, test) in enumerate(cv.split(X_)):
-            train = backend.to_gpu(train, device=device)
-            test = backend.to_gpu(test, device=device)
+            if not Y_in_cpu:
+                train = backend.to_gpu(train, device=device)
+                test = backend.to_gpu(test, device=device)
+
             Xtrain, Xtest = X_[train], X_[test]
 
             if fit_intercept:
